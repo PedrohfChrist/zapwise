@@ -5,6 +5,7 @@ import { Link, useNavigate } from "react-router-dom"; // Importe o useNavigate
 import { useSignup } from "@/hooks/useSignup";
 import { ReloadIcon } from "@radix-ui/react-icons";
 import Logo from "@/components/Logo";
+import SignupDesign from "@/assets/SignupDesign.svg";
 
 export default function Signup() {
   const [fullName, setFullName] = useState("");
@@ -19,37 +20,52 @@ export default function Signup() {
   };
 
   return (
-    <div className="w-full h-screen flex px-40 py-28 gap-20">
-      <div className="w-1/2 bg-muted rounded-xl p-12 ">
-        <Logo />
-        <h2 className="mt-24 text-4xl leading-[50px] font-medium">TESTE</h2>
-        <p className="text-muted-foregrounde mt-10">TESTE PARAGRAFO</p>
-        <div className="bg-foreground text-background p-8 rounded-xl mt-16 leading-8 ">
-          TESTE DIV
+    <div className="w-full h-screen flex flex-col md:flex-row px-4 md:px-20 py-0 md:py-28 gap-10 md:gap-20">
+      <div className="w-full md:w-1/2 bg-muted rounded-xl p-8 md:p-12 flex flex-col items-center">
+        <div className="text-background p-4 md:p-8 rounded-xl leading-8">
+          <img
+            src={SignupDesign}
+            alt="Signup Design"
+            className="w-full max-h-48 md:max-h-72 object-contain"
+          />
+        </div>
+        <div className="flex flex-col items-center mt-6">
+          <Logo />
+          <p className="text-muted-foreground font-medium mt-4 text-center text-sm md:text-md">
+            Domine o poder do copywriting de alta conversão!
+          </p>
         </div>
       </div>
-      <div className="flex flex-col justify-center w-1/2 px-20">
+      <div className="flex flex-col justify-center w-full md:w-1/2 px-4 md:px-20 mb-10 md:mb-0">
         <div>
-          <h1 className="text-3xl font-medium">Cadastre-se agora</h1>
-          <p className="mt-4 text-muted-foreground font-normal text-lg">
-            Crie sua conta agora mesmo
+          <p className="mb-2 md:mb-4 text-muted-foreground font-normal text-sm md:text-md uppercase">
+            Teste de graça
           </p>
-          <form className="mt-10" onSubmit={handleSubmit}>
-            <p className="text-muted-foreground mb-2.5">Nome completo</p>
+          <h1 className="text-2xl md:text-4xl font-medium">
+            Criar uma nova conta.
+          </h1>
+          <form className="mt-6 md:mt-10" onSubmit={handleSubmit}>
+            <p className="text-muted-foreground mb-2 text-sm md:text-md">
+              Nome completo
+            </p>
             <Input
               type="text"
               autoComplete="name"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
             />
-            <p className="mt-5 text-muted-foreground mb-2.5">E-mail</p>
+            <p className="mt-4 md:mt-5 text-muted-foreground mb-2 text-sm md:text-md">
+              E-mail
+            </p>
             <Input
               type="email"
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
-            <p className="mt-5 text-muted-foreground mb-2.5">Senha</p>
+            <p className="mt-4 md:mt-5 text-muted-foreground mb-2 text-sm md:text-md">
+              Senha
+            </p>
             <Input
               type="password"
               autoComplete="new-password"
@@ -58,8 +74,7 @@ export default function Signup() {
             />
             <Button
               disabled={isPending}
-             
-              className="text-lg w-full mt-10 py-6"
+              className="text-sm md:text-lg w-full mt-6 md:mt-10 py-4 md:py-6 text-white"
             >
               {isPending && (
                 <ReloadIcon className="w-4 h-4 mr-2 animate-spin" />
@@ -67,7 +82,7 @@ export default function Signup() {
               {isPending ? "Criando a conta..." : "Criar minha conta"}
             </Button>
           </form>
-          <div className="flex gap-2 text-lg mt-12 justify-center">
+          <div className="flex gap-2 text-sm md:text-lg mt-6 md:mt-12 justify-center mb-16 md:mb-0">
             <p>Já tem uma conta?</p>
             <Link to="/login" className="text-primary">
               Entre aqui

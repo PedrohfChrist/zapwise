@@ -1,6 +1,5 @@
 import WarningBar from "@/components/WarningBar";
 import React, { useState, useCallback } from "react";
-import { useCollection } from "@/hooks/useCollection";
 import { useFirestore } from "@/hooks/useFirestore";
 import {
   ClipboardCopyIcon,
@@ -23,12 +22,11 @@ export default function Collection() {
   const [selectedProject, setSelectedProject] = useState(null);
   const [isAlertDialogOpen, setIsAlertDialogOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState(null);
-  const { documents: savedProjects, error } = useCollection(
-    "savedProjects",
-    null,
-    ["createdAt", "desc"]
-  );
-  const { deleteDocument } = useFirestore("savedProjects");
+  const {
+    documents: savedProjects,
+    error,
+    deleteDocument,
+  } = useFirestore("savedProjects");
   const [isCopied, setIsCopied] = useState(false);
   const [isDownloaded, setIsDownloaded] = useState(false);
 

@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
 import WarningBar from "@/components/WarningBar";
-import { useCollection } from "@/hooks/useCollection";
 import { useFirestore } from "@/hooks/useFirestore";
 import {
   ClipboardCopyIcon,
@@ -15,11 +14,12 @@ import { Toaster } from "@/shadcn/components/ui/toaster";
 
 export default function History() {
   const [selectedProject, setSelectedProject] = useState(null);
-  const { documents, error } = useCollection("copies", null, [
-    "createdAt",
-    "desc",
-  ]);
-  const { deleteDocument, addDocument: saveCopy } = useFirestore("copies");
+  const {
+    documents,
+    error,
+    deleteDocument,
+    addDocument: saveCopy,
+  } = useFirestore("copies");
   const { addDocument: saveProject, documents: savedProjects } =
     useFirestore("savedProjects");
   const [isCopied, setIsCopied] = useState(false);

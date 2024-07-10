@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState } from "react";
 import { useCollection } from "@/hooks/useCollection";
 import { useFirestore } from "@/hooks/useFirestore";
+import { useAuthContext } from "@/hooks/useAuthContext"; // Adicionando o contexto de autenticação
 
 const PersonaContext = createContext();
 
@@ -9,7 +10,12 @@ export const usePersonas = () => {
 };
 
 const PersonaProvider = ({ children }) => {
-  const { documents: personas, error } = useCollection("personas");
+  const { user } = useAuthContext(); // Pegar usuário logado
+  const { documents: personas, error } = useCollection("personas", [
+    "userId",
+    "==",
+    user?.uid,
+  ]);
   const { addDocument, updateDocument, deleteDocument } =
     useFirestore("personas");
   const [selectedPersona, setSelectedPersona] = useState(null);

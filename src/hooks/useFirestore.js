@@ -6,9 +6,13 @@ import {
   updateDoc,
   doc,
   setDoc,
+  query,
+  where,
+  onSnapshot,
   serverTimestamp,
 } from "firebase/firestore";
 import { db, timestamp } from "../firebase/config";
+import { useAuthContext } from "@/hooks/useAuthContext"; // Hook para pegar o usuário logado
 
 const initialState = {
   document: null,
@@ -69,6 +73,8 @@ const firestoreReducer = (state, action) => {
 export const useFirestore = (coll) => {
   const [response, dispatch] = useReducer(firestoreReducer, initialState);
   const [isCancelled, setIsCancelled] = useState(false);
+  const [documents, setDocuments] = useState([]);
+  const { user } = useAuthContext(); // Pegar usuário logado
 
   // Collection ref
   const ref = collection(db, coll);
@@ -80,12 +86,29 @@ export const useFirestore = (coll) => {
     }
   };
 
+  // Fetch documents for the current user
+  useEffect(() => {
+    if (!user) return;
+
+    const q = query(ref, where("userId", "==", user.uid));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const results = [];
+      snapshot.docs.forEach((doc) => {
+        results.push({ ...doc.data(), id: doc.id });
+      });
+      setDocuments(results);
+    });
+
+    return () => unsubscribe();
+  }, [ref, user]);
+
   // Add a document
   const addDocument = async (doc) => {
     dispatch({ type: "IS_PENDING" });
     try {
       const createdAt = timestamp;
-      const addedDocument = await addDoc(ref, { ...doc, createdAt });
+      const userId = user.uid; // Pegar userId
+      const addedDocument = await addDoc(ref, { ...doc, createdAt, userId });
       dispatchIfNotCancelled({
         type: "ADDED_DOCUMENT",
         payload: addedDocument,
@@ -101,10 +124,12 @@ export const useFirestore = (coll) => {
   const createDocument = async (id, data) => {
     try {
       const createdAt = timestamp;
+      const userId = user.uid; // Pegar userId
 
       const documentSet = await setDoc(doc(db, coll, id), {
         ...data,
         createdAt,
+        userId,
       });
 
       dispatchIfNotCancelled({
@@ -162,6 +187,7 @@ export const useFirestore = (coll) => {
     createDocument,
     updateDocument,
     response,
+    documents,
     serverTimestamp,
   };
 };

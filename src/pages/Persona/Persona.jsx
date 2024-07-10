@@ -201,7 +201,7 @@ export default function Persona() {
                 />
               </label>
               <label>
-                Qual é o seu subnicho?
+                Qual é o seu subniche?
                 <Input
                   name="subniche"
                   placeholder="Ex.: Emagrecimento por meio de uma dieta sem restrições."
