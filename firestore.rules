@@ -2,18 +2,60 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    // Função para verificar se o usuário é um admin
+    function isAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.admin == true;
+    }
+    
+    // Função para verificar se o usuário é o proprietário do documento
+    function isOwner(ownerId) {
+      return request.auth.uid == ownerId;
+    }
+    
+    // Função para verificar se o usuário está autenticado
+    function isSignedIn() {
+      return request.auth.uid != null;
+    }
 
-    // This rule allows anyone with your Firestore database reference to view, edit,
-    // and delete all data in your Firestore database. It is useful for getting
-    // started, but it is configured to expire after 30 days because it
-    // leaves your app open to attackers. At that time, all client
-    // requests to your Firestore database will be denied.
-    //
-    // Make sure to write security rules for your app before that time, or else
-    // all client requests to your Firestore database will be denied until you Update
-    // your rules
+    // Bloqueio padrão para todos os documentos
     match /{document=**} {
-      allow read, write: if request.time < timestamp.date(2024, 5, 26);
+      allow read, write: if false;
+    }
+
+    // Regras para documentos de usuários
+    match /users/{userId} {
+      allow delete: if false;
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if
+        isSignedIn() && request.auth.uid == userId
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['email', 'id', 'admin']);
+      allow read:
+        if isSignedIn() && (request.auth.uid == userId || isAdmin());
+    }
+
+    // Regras para documentos de projetos
+    match /projects/{projectId} {
+      allow create: if isSignedIn();
+      allow read, update, delete: if isSignedIn() && (isOwner(resource.data.ownerId) || isAdmin());
+    }
+
+    // Regras para documentos de histórico
+    match /history/{historyId} {
+      allow create: if isSignedIn();
+      allow read, update, delete: if isSignedIn() && (isOwner(resource.data.ownerId) || isAdmin());
+    }
+
+    // Regras para documentos de projetos salvos
+    match /savedProjects/{savedProjectId} {
+      allow create: if isSignedIn();
+      allow read, update, delete: if isSignedIn() && (isOwner(resource.data.ownerId) || isAdmin());
+    }
+
+    // Regras para documentos de cópias criadas
+    match /copies/{copyId} {
+      allow create: if isSignedIn();
+      allow read, update, delete: if isSignedIn() && (isOwner(resource.data.ownerId) || isAdmin());
     }
   }
 }
