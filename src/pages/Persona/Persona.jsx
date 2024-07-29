@@ -42,7 +42,7 @@ export default function Persona() {
   const [newPersona, setNewPersona] = useState({
     name: "",
     niche: "",
-    subniche: "",
+    subnicho: "",
     targetAge: "",
     targetGender: "",
     mainPromise: "",
@@ -60,12 +60,14 @@ export default function Persona() {
   };
 
   const handleAddPersona = () => {
+    console.log("Adding persona:", newPersona); // Log de depuração
     addDocument(newPersona).then((res) => {
       if (res.type === "SUCCESS") {
+        console.log("Persona added successfully:", res.payload); // Log de sucesso
         setNewPersona({
           name: "",
           niche: "",
-          subniche: "",
+          subnicho: "",
           targetAge: "",
           targetGender: "",
           mainPromise: "",
@@ -73,6 +75,8 @@ export default function Persona() {
           mechanism: "",
         });
         setIsDialogOpen(false);
+      } else {
+        console.error("Error adding persona:", res.payload); // Log de erro
       }
     });
   };
@@ -86,13 +90,15 @@ export default function Persona() {
   const handleSaveEditPersona = () => {
     if (selectedPersona !== null) {
       const personaId = personas[selectedPersona].id;
+      console.log("Updating persona:", personaId, newPersona); // Log de depuração
       updateDocument(personaId, newPersona).then((res) => {
         if (res.type === "SUCCESS") {
+          console.log("Persona updated successfully:", res.payload); // Log de sucesso
           setSelectedPersona(null);
           setNewPersona({
             name: "",
             niche: "",
-            subniche: "",
+            subnicho: "",
             targetAge: "",
             targetGender: "",
             mainPromise: "",
@@ -100,6 +106,8 @@ export default function Persona() {
             mechanism: "",
           });
           setIsDialogOpen(false);
+        } else {
+          console.error("Error updating persona:", res.payload); // Log de erro
         }
       });
     }
@@ -107,11 +115,15 @@ export default function Persona() {
 
   const handleDeletePersona = () => {
     const personaId = personas[selectedPersona].id;
+    console.log("Deleting persona:", personaId); // Log de depuração
     deleteDocument(personaId).then((res) => {
       if (res.type === "SUCCESS") {
+        console.log("Persona deleted successfully"); // Log de sucesso
         setSelectedPersona(null);
         setIsDialogOpen(false);
         setIsAlertDialogOpen(false);
+      } else {
+        console.error("Error deleting persona:", res.payload); // Log de erro
       }
     });
   };
@@ -201,11 +213,11 @@ export default function Persona() {
                 />
               </label>
               <label>
-                Qual é o seu subniche?
+                Qual é o seu subnicho?
                 <Input
-                  name="subniche"
+                  name="subnicho"
                   placeholder="Ex.: Emagrecimento por meio de uma dieta sem restrições."
-                  value={newPersona.subniche}
+                  value={newPersona.subnicho}
                   onChange={handleInputChange}
                   className="p-2 rounded-md focus-visible:ring-offset-0 focus-visible:ring-0 focus:border-primary"
                 />

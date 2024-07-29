@@ -103,12 +103,16 @@ export const useFirestore = (coll) => {
   }, [ref, user]);
 
   // Add a document
-  const addDocument = async (doc) => {
+  const addDocument = async (docData) => {
     dispatch({ type: "IS_PENDING" });
     try {
       const createdAt = timestamp;
       const userId = user.uid; // Pegar userId
-      const addedDocument = await addDoc(ref, { ...doc, createdAt, userId });
+      const addedDocument = await addDoc(ref, {
+        ...docData,
+        createdAt,
+        userId,
+      });
       dispatchIfNotCancelled({
         type: "ADDED_DOCUMENT",
         payload: addedDocument,

@@ -1,14 +1,85 @@
 import { useState, useEffect } from "react";
-import { doc, updateDoc } from "firebase/firestore";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth, db } from "../firebase/config";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
+import { auth, db, googleProvider } from "../firebase/config"; // Certifique-se de que googleProvider está sendo importado corretamente
 import { useAuthContext } from "./useAuthContext";
+import { getCookie } from "@/utils/getCookie";
+import { useQuery } from "./useQuery";
 
 export const useLogin = () => {
   const [isCancelled, setIsCancelled] = useState(false);
   const [error, setError] = useState(null);
   const [isPending, setIsPending] = useState(false);
   const { dispatch } = useAuthContext();
+  const query = useQuery();
+
+  const checkUserDoc = async (uid) => {
+    const userRef = doc(db, "users", uid);
+    const docSnapshot = await getDoc(userRef);
+    return docSnapshot.exists();
+  };
+
+  const authenticateWithGoogle = async (action) => {
+    setError(null);
+    setIsPending(true);
+
+    try {
+      const res = await signInWithPopup(auth, googleProvider);
+
+      if (action === "login") {
+        const userRef = doc(db, "users", res.user.uid);
+        await updateDoc(userRef, { online: true });
+        dispatch({ type: "LOGIN", payload: res.user });
+      } else {
+        let attempts = 0;
+        const maxAttempts = 10;
+
+        while (attempts < maxAttempts) {
+          const exists = await checkUserDoc(res.user.uid);
+
+          if (exists) {
+            const userRef = doc(db, "users", res.user.uid);
+            await updateDoc(userRef, {
+              online: true,
+              user_agent: navigator.userAgent,
+              origin: window.location.href.split("?")[0],
+              fbp: getCookie("_fbp"),
+              fbc: getCookie("_fbc"),
+              utm: {
+                source: query.get("utm_source") || getCookie("utm_source"),
+                medium: query.get("utm_medium") || getCookie("utm_medium"),
+                campaign:
+                  query.get("utm_campaign") || getCookie("utm_campaign"),
+                term: query.get("utm_term") || getCookie("utm_term"),
+                content: query.get("utm_content") || getCookie("utm_content"),
+              },
+              sck: query.get("sck") || getCookie("sck"),
+            });
+            dispatch({ type: "LOGIN", payload: res.user });
+            break;
+          }
+
+          attempts++;
+          await new Promise((resolve) => setTimeout(resolve, 1000)); // Espera 1 segundo entre tentativas
+        }
+
+        if (attempts === maxAttempts) {
+          throw new Error("Max attempts reached. User doc was not created.");
+        }
+      }
+
+      if (!isCancelled) {
+        setIsPending(false);
+        setError(null);
+      }
+    } catch (err) {
+      console.log(err.message);
+      if (!isCancelled) {
+        setError(err.message);
+        setIsPending(false);
+      }
+    }
+  };
 
   const login = async (email, password) => {
     setError(null);
@@ -18,7 +89,6 @@ export const useLogin = () => {
       const res = await signInWithEmailAndPassword(auth, email, password);
 
       const userRef = doc(db, "users", res.user.uid);
-
       await updateDoc(userRef, { online: true });
 
       dispatch({ type: "LOGIN", payload: res.user });
@@ -36,13 +106,12 @@ export const useLogin = () => {
     }
   };
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    return () => {
       setIsPending(false);
       setIsCancelled(true);
-    },
-    []
-  );
+    };
+  }, []);
 
-  return { login, error, isPending };
+  return { login, authenticateWithGoogle, error, isPending };
 };

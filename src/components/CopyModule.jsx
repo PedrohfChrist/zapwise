@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/shadcn/components/ui/button";
 import { Input } from "@/shadcn/components/ui/input";
 import { Textarea } from "@/shadcn/components/ui/textarea";
@@ -51,6 +51,8 @@ const CopyModule = ({ moduleType, fields, promptTemplate, initialData }) => {
   const [isDownloaded, setIsDownloaded] = useState(false); // Estado para o efeito de download
   const [isLoading, setIsLoading] = useState(false); // Estado para carregamento
   const [isSaved, setIsSaved] = useState(false); // Estado para indicar se o projeto foi salvo
+
+  const timerRef = useRef(null); // Usar useRef para manter a referência do timer
 
   useEffect(() => {
     window.scrollTo(0, 0); // Scroll to the top of the page
@@ -192,16 +194,19 @@ const CopyModule = ({ moduleType, fields, promptTemplate, initialData }) => {
 
   const typeCopy = (text) => {
     let index = 0;
-    const speed = 10; // Ajuste a velocidade aqui (em milissegundos)
-    setDisplayedCopy(""); // Reseta o estado de exibição da copy
-    const timer = setInterval(() => {
-      setDisplayedCopy((prev) => prev + text.charAt(index));
-      index++;
-      if (index === text.length) {
-        clearInterval(timer);
-        setIsLoading(false); // Finaliza o estado de carregamento
-      }
-    }, speed);
+    const speed = 20; // Ajuste a velocidade aqui (em milissegundos)
+
+    // Pausa inicial de 50ms para evitar bug inicial
+    setTimeout(() => {
+      timerRef.current = setInterval(() => {
+        setDisplayedCopy((prev) => prev + text.charAt(index));
+        index++;
+        if (index === text.length) {
+          clearInterval(timerRef.current);
+          setIsLoading(false); // Finaliza o estado de carregamento
+        }
+      }, speed);
+    }, 50);
   };
 
   const handleCopy = () => {

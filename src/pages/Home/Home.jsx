@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import WarningBar from "@/components/WarningBar";
 import {
@@ -6,28 +6,23 @@ import {
   CheckCircledIcon,
   ClipboardIcon,
   EnvelopeClosedIcon,
-  EnvelopeOpenIcon,
-  ExclamationTriangleIcon,
-  GearIcon,
-  HeadingIcon,
   HeartIcon,
-  InstagramLogoIcon,
   LayersIcon,
-  MagnifyingGlassIcon,
   Pencil1Icon,
-  PlayIcon,
   RocketIcon,
-  SpeakerLoudIcon,
   TextAlignJustifyIcon,
   VideoIcon,
+  HeadingIcon,
+  GearIcon,
 } from "@radix-ui/react-icons";
+import { useSubscriptionContext } from "@/hooks/useSubscriptionContext";
 
 const models = {
   anúncios: [
     {
       title: "Facebook Ads | Título",
       description:
-        "Gerador de títulos para anúncio de Facebook Ads. Títulos persoasivos para chamar atenção e atrair o usuário.",
+        "Gerador de títulos para anúncio de Facebook Ads. Títulos persuasivos para chamar atenção e atrair o usuário.",
       icon: <HeadingIcon />,
       badgeColor: "bg-cyan-300",
       route: "/create/fb-ads-title",
@@ -167,6 +162,11 @@ const filterLabels = {
 export default function Home() {
   const [filter, setFilter] = useState("todos");
   const navigate = useNavigate();
+  const { subscriptionDoc, subscriptionStatus } = useSubscriptionContext();
+
+  useEffect(() => {
+    console.log(subscriptionDoc); // Para debug
+  }, [subscriptionDoc]);
 
   const handleFilterClick = (filter) => {
     setFilter(filter);

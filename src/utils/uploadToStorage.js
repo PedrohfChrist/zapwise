@@ -1,16 +1,33 @@
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { storage } from "../firebase/config";
+import { storage } from "@/firebase/config";
+import { uploadBytesResumable, getDownloadURL, ref } from "firebase/storage";
 
 const uploadToStorage = async (file, path, fileName) => {
-  const storageRef = ref(storage, `${path}/${fileName}`);
-  try {
-    await uploadBytes(storageRef, file);
-    const downloadURL = await getDownloadURL(storageRef);
-    return downloadURL;
-  } catch (error) {
-    console.error("Erro ao fazer upload do arquivo: ", error);
-    throw error;
-  }
+  return new Promise((resolve, reject) => {
+    const storageRef = ref(
+      storage,
+      `${path}/${fileName}.${file.type.split("/")[1]}`
+    );
+
+    const uploadTask = uploadBytesResumable(storageRef, file);
+
+    uploadTask.on(
+      "state_changed",
+      (snapshot) => {
+        console.log(snapshot);
+        // Progress handling can go here
+      },
+      (error) => {
+        // Handle errors here
+        reject(error);
+      },
+      () => {
+        getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+          console.log("Arquivo disponível na URL: ", downloadURL);
+          resolve(downloadURL);
+        });
+      }
+    );
+  });
 };
 
 export default uploadToStorage;

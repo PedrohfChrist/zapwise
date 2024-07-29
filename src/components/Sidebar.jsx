@@ -49,15 +49,19 @@ export default function Sidebar({ rerender, isOpen, onClose }) {
   return (
     <>
       <div
-        className={`fixed inset-0 z-50 ${
-          isOpen ? "block" : "hidden"
+        className={`fixed inset-0 z-50 transition-opacity duration-300 ${
+          isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         } sm:hidden`}
       >
         <div
           className="fixed inset-0 bg-black bg-opacity-50"
           onClick={onClose}
         ></div>
-        <nav className="fixed h-full w-[250px] bg-background z-50">
+        <nav
+          className={`fixed h-full w-[250px] bg-background z-50 transform transition-transform duration-300 ${
+            isOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
           <div className="p-5 flex justify-between items-center">
             <Logo size="sm" />
             <button onClick={onClose}>
@@ -73,7 +77,7 @@ export default function Sidebar({ rerender, isOpen, onClose }) {
             </Avatar>
             <div>
               <p className="font-medium">{user.displayName.split(" ")[0]}</p>
-              <p className="font-muted-foreground/75 text-sm">
+              <p className="text-sm text-muted-foreground/75">
                 Premium account
               </p>
             </div>
@@ -123,7 +127,7 @@ export default function Sidebar({ rerender, isOpen, onClose }) {
           <div className="p-5">
             <Separator className="bg-border" />
           </div>
-          <div className="p-5">
+          <div className="px-5 pb-5">
             <div
               role="button"
               className={`py-2 px-3 flex items-center gap-3 cursor-pointer ${
@@ -185,7 +189,7 @@ export default function Sidebar({ rerender, isOpen, onClose }) {
             </Avatar>
             <div>
               <p className="font-medium">{user.displayName.split(" ")[0]}</p>
-              <p className="font-muted-foreground/75 text-sm">
+              <p className="text-sm text-muted-foreground/75">
                 Premium account
               </p>
             </div>
@@ -236,7 +240,7 @@ export default function Sidebar({ rerender, isOpen, onClose }) {
         <div className="p-5">
           <Separator className="bg-border" />
         </div>
-        <div className="p-5">
+        <div className="px-5 pb-5">
           <div
             role="button"
             className={`py-2 px-3 flex items-center gap-3 cursor-pointer ${

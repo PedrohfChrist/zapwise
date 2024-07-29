@@ -1,11 +1,11 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { useSubscription } from "@/contexts/SubscriptionContext";
+import { useSubscriptionContext } from "@/contexts/SubscriptionContext"; // Corrigir a importação aqui
 import { CounterClockwiseClockIcon } from "@radix-ui/react-icons";
 
 export default function WarningBar({ disabled }) {
   const navigate = useNavigate();
-  const { subscriptionStatus } = useSubscription();
+  const { subscriptionStatus } = useSubscriptionContext();
 
   const commonStyles = `text-white p-2 text-center rounded-lg flex flex-col items-center gap-2 ${
     disabled ? "opacity-50 pointer-events-none" : ""

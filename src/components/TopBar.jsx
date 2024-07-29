@@ -1,4 +1,3 @@
-// TopBar.jsx
 import React from "react";
 import { HamburgerMenuIcon } from "@radix-ui/react-icons";
 import Logo from "./Logo";
