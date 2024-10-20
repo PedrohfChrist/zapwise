@@ -1,27 +1,71 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/shadcn/components/ui/button";
 import { Input } from "@/shadcn/components/ui/input";
 import { Link, useNavigate } from "react-router-dom";
 import { useSignup } from "@/hooks/useSignup";
-import { useLogin } from "@/hooks/useLogin"; // Importar useLogin
+import { useLogin } from "@/hooks/useLogin";
 import { ReloadIcon } from "@radix-ui/react-icons";
 import Logo from "@/components/Logo";
 import SignupDesign from "@/assets/SignupDesign.svg";
 import GoogleLogo from "@/components/GoogleLogo";
+import {
+  validatePassword,
+  validateEmail,
+  validateFullName,
+} from "@/utils/validate";
 
 export default function Signup() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [emailTypo, setEmailTypo] = useState("");
   const { signup, error, isPending } = useSignup();
-  const { authenticateWithGoogle } = useLogin(); // Chamar authenticateWithGoogle
+  const { authenticateWithGoogle, isPending: googleIsPending } = useLogin();
   const navigate = useNavigate();
-  const [isEmailSignup, setIsEmailSignup] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
+  const [message, setMessage] = useState("");
+
+  const checkEmailTypos = (email) => {
+    const emailParts = email.split("@");
+    if (emailParts.length !== 2) return;
+
+    const domain = emailParts[1];
+    const corrections = {
+      "outlok.com": "outlook.com",
+      "otlook.com": "outlook.com",
+      "gamil.com": "gmail.com",
+      "gmial.com": "gmail.com",
+      "gmail.co": "gmail.com",
+      "gmai.com": "gmail.com",
+      "hotmal.com": "hotmail.com",
+      "hotmai.com": "hotmail.com",
+      "hotmial.com": "hotmail.com",
+      "live.con": "live.com",
+      "live.cmo": "live.com",
+      "live.cm": "live.com",
+    };
+
+    if (corrections[domain]) {
+      setEmailTypo(`Você quis dizer ${emailParts[0]}@${corrections[domain]}?`);
+    } else {
+      setEmailTypo("");
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsEmailSignup(true);
+
+    const { isValidFullName, message: nameMsg } = validateFullName(fullName);
+    const { isValidEmail, message: emailMsg } = validateEmail(email);
+    const { isValidPassword, message: passMsg } = validatePassword(password);
+
+    if (!isValidFullName || !isValidEmail || !isValidPassword) {
+      setMessage({
+        type: "error",
+        message: nameMsg || emailMsg || passMsg,
+      });
+      return;
+    }
+
     try {
       await signup(email, password, fullName);
       navigate("/");
@@ -29,6 +73,20 @@ export default function Signup() {
       console.error("Erro ao criar a conta:", error);
     }
   };
+
+  useEffect(() => {
+    if (error) {
+      let errorMsg = "Ocorreu um erro ao criar a conta. Tente novamente.";
+      if (error.includes("email-already-in-use")) {
+        errorMsg = "O e-mail informado já está em uso.";
+      } else if (error.includes("weak-password")) {
+        errorMsg = "A senha informada é muito fraca.";
+      } else if (error.includes("invalid-email")) {
+        errorMsg = "O e-mail informado é inválido.";
+      }
+      setMessage({ type: "error", message: errorMsg });
+    }
+  }, [error]);
 
   return (
     <div className="w-full h-screen flex flex-col md:flex-row px-4 md:px-20 py-6 md:py-28 gap-10 md:gap-20">
@@ -58,17 +116,25 @@ export default function Signup() {
           <Button
             variant="outline"
             className="mt-6 text-lg w-full"
-            disabled={isPending}
+            disabled={googleIsPending || isPending}
             onClick={() => authenticateWithGoogle("signup")}
           >
-            {isPending && !isEmailSignup && (
+            {googleIsPending && !isPending && (
               <ReloadIcon className="w-5 h-5 mr-2 animate-spin" />
             )}
             <GoogleLogo />
-            {isPending && !isEmailSignup
-              ? "Criando conta..."
-              : "Criar conta com Google"}
+            {googleIsPending ? "Aguardando..." : "Criar conta com Google"}
           </Button>
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t"></span>
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-primary-foreground px-2 text-muted-foreground">
+                Ou continue com
+              </span>
+            </div>
+          </div>
           <form className="mt-10" onSubmit={handleSubmit}>
             <p className="text-muted-foreground mb-2 text-sm md:text-md">
               Nome completo
@@ -77,7 +143,14 @@ export default function Signup() {
               type="text"
               autoComplete="name"
               value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                const regex = /^[A-Za-z\s]+$/;
+
+                if (value === "" || regex.test(value)) {
+                  setFullName(value);
+                }
+              }}
             />
             <p className="mt-4 md:mt-5 text-muted-foreground mb-2 text-sm md:text-md">
               E-mail
@@ -86,8 +159,31 @@ export default function Signup() {
               type="email"
               autoComplete="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value.trim().toLowerCase();
+                const regex = /^[a-zA-Z0-9._%+-@]+$/;
+
+                if (value === "" || regex.test(value)) {
+                  setEmail(value);
+                }
+
+                checkEmailTypos(e.target.value);
+              }}
             />
+            {emailTypo && (
+              <p
+                className="text-muted-foreground text-sm mt-1.5"
+                role="button"
+                onClick={() => {
+                  setEmail(
+                    emailTypo.split("Você quis dizer ")[1].replace("?", "")
+                  );
+                  setEmailTypo("");
+                }}
+              >
+                {emailTypo}
+              </p>
+            )}
             <p className="mt-4 md:mt-5 text-muted-foreground mb-2 text-sm md:text-md">
               Senha
             </p>
@@ -98,7 +194,7 @@ export default function Signup() {
               onChange={(e) => setPassword(e.target.value)}
             />
             <Button
-              disabled={isPending}
+              disabled={isPending || googleIsPending}
               className="text-sm md:text-lg w-full mt-6 md:mt-10 py-4 md:py-6 text-white"
             >
               {isPending && (
@@ -107,7 +203,9 @@ export default function Signup() {
               {isPending ? "Criando a conta..." : "Criar minha conta"}
             </Button>
           </form>
-          {errorMsg && <p className="text-red-500 mt-2.5">{errorMsg}</p>}
+          {message && message.type === "error" && (
+            <p className="text-red-500 mt-2.5">{message.message}</p>
+          )}
           <div className="flex gap-2 text-sm md:text-lg mt-6 md:mt-12 justify-center mb-16 md:mb-0">
             <p>Já tem uma conta?</p>
             <Link to="/login" className="text-primary">

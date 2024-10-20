@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { ModeToggle } from "@/shadcn/components/mode-toggle";
 import {
   Avatar,
@@ -15,6 +15,7 @@ import { CameraIcon } from "lucide-react";
 import WarningBar from "@/components/WarningBar";
 import { Card, CardContent } from "@/shadcn/components/ui/card";
 import { Button } from "@/shadcn/components/ui/button";
+import { useSubscriptionContext } from "@/contexts/SubscriptionContext"; // Usar o SubscriptionContext para pegar informações de assinatura
 
 const Account = ({ rerender, setRerender }) => {
   const { user } = useAuthContext();
@@ -25,6 +26,8 @@ const Account = ({ rerender, setRerender }) => {
   const [currentPassword, setCurrentPassword] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
+
+  const { subscriptionStatus } = useSubscriptionContext(); // Pegar dados do contexto de assinatura
 
   const isEmailProvider =
     user.providerData &&
@@ -140,6 +143,38 @@ const Account = ({ rerender, setRerender }) => {
         />
         <p className="mt-5 text-muted-foreground mb-2.5">Tema (claro/escuro)</p>
         <ModeToggle />
+        {subscriptionStatus && (
+          <>
+            <p className="mt-5 text-muted-foreground mb-2.5">
+              Palavras geradas este mês
+            </p>
+            <Input
+              disabled
+              value={subscriptionStatus.wordsGenerated}
+              readOnly
+              type="text"
+              className="w-full"
+            />
+            <p className="mt-5 text-muted-foreground mb-2.5">
+              Limite de palavras do plano
+            </p>
+            <Input
+              disabled
+              value={
+                subscriptionStatus.planLimit === 20000
+                  ? "20.000 palavras"
+                  : subscriptionStatus.planLimit === 100000
+                  ? "100.000 palavras"
+                  : subscriptionStatus.planLimit === 300000
+                  ? "300.000 palavras"
+                  : "0 palavras"
+              }
+              readOnly
+              type="text"
+              className="w-full"
+            />
+          </>
+        )}
         {isEmailProvider && (
           <Card className="mt-8 w-full">
             <CardContent>

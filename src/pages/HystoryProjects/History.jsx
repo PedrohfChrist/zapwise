@@ -11,6 +11,9 @@ import { Button } from "@/shadcn/components/ui/button";
 import { Textarea } from "@/shadcn/components/ui/textarea";
 import { useToast } from "@/shadcn/components/ui/use-toast";
 import { Toaster } from "@/shadcn/components/ui/toaster";
+import { useAuthContext } from "@/hooks/useAuthContext";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/firebase/config"; // Certifique-se de importar corretamente o db
 
 export default function History() {
   const [selectedProject, setSelectedProject] = useState(null);
@@ -29,6 +32,27 @@ export default function History() {
     return saved ? JSON.parse(saved) : {};
   });
   const { toast } = useToast();
+  const { user } = useAuthContext();
+  const [planStatus, setPlanStatus] = useState(null); // Estado para verificar o plano
+  const [isAdmin, setIsAdmin] = useState(false); // Estado para verificar se o usuário é admin
+
+  useEffect(() => {
+    const fetchPlanStatus = async () => {
+      const subscriptionRef = doc(db, "subscriptions", user.uid);
+      const subscriptionDoc = await getDoc(subscriptionRef);
+      if (subscriptionDoc.exists()) {
+        const subscriptionData = subscriptionDoc.data();
+        setPlanStatus(subscriptionData);
+        if (user.uid === "Y05s3draE8NnHgOLPlUbqLeOdlH2") {
+          setIsAdmin(true);
+        }
+      }
+    };
+
+    if (user) {
+      fetchPlanStatus();
+    }
+  }, [user]);
 
   useEffect(() => {
     if (savedProjects) {
@@ -70,7 +94,12 @@ export default function History() {
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(selectedProject.generatedCopy).then(
       () => {
-        console.log("Texto copiado para a área de transferência!");
+        toast({
+          title: "Texto copiado!",
+          description: "O texto foi copiado para a área de transferência.",
+          status: "success",
+          duration: 3000,
+        });
         setIsCopied(true);
         setTimeout(() => setIsCopied(false), 100);
       },
@@ -78,7 +107,7 @@ export default function History() {
         console.error("Erro ao copiar o texto: ", err);
       }
     );
-  }, [selectedProject]);
+  }, [selectedProject, toast]);
 
   const handleDownload = useCallback(() => {
     const element = document.createElement("a");
@@ -113,9 +142,7 @@ export default function History() {
           originalId: project.id,
         };
 
-        console.log("Document Data to Save:", dataToSave);
         const result = await saveProject(dataToSave);
-        console.log("Project saved:", result);
         if (result && result.type === "SUCCESS") {
           setSavedStatus((prevStatus) => {
             const newStatus = { ...prevStatus, [project.id]: true };
@@ -137,7 +164,6 @@ export default function History() {
     async (newProject) => {
       try {
         if (documents.length >= 20) {
-          // Delete the oldest document if there are more than 20
           const oldestProject = documents[documents.length - 1];
           await deleteDocument(oldestProject.id);
         }
@@ -212,7 +238,7 @@ export default function History() {
         </div>
 
         {selectedProject && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 text-foreground ">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 text-foreground">
             <div className="bg-card rounded-2xl p-8 w-full max-w-4xl relative z-50 h-[80vh] overflow-auto">
               <button
                 className="absolute top-1 right-4 text-4xl"

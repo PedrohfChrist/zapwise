@@ -14,7 +14,6 @@ export const useLogout = () => {
     setError(null);
     setIsPending(true);
 
-    // Sign the user out
     try {
       const { uid } = user;
       const userRef = doc(db, "users", uid);
@@ -22,10 +21,8 @@ export const useLogout = () => {
 
       await signOut(auth);
 
-      // Dispatch logout action
       dispatch({ type: "LOGOUT" });
 
-      // Update state
       if (!isCancelled) {
         setIsPending(false);
         setError(null);
@@ -39,7 +36,9 @@ export const useLogout = () => {
     }
   };
 
-  useEffect(() => () => setIsCancelled(true), []);
+  useEffect(() => {
+    return () => setIsCancelled(true);
+  }, []);
 
   return { logout, error, isPending };
 };

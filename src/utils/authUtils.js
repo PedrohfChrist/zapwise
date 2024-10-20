@@ -11,7 +11,14 @@ export const authenticateWithGoogle = async () => {
     const user = result.user;
     return user;
   } catch (error) {
-    console.error("Erro na autenticação com Google: ", error);
-    throw error;
+    // Verifica se o erro é do tipo popup fechado pelo usuário
+    if (error.code === "auth/popup-closed-by-user") {
+      console.warn("O usuário fechou o popup antes de completar o login.");
+      // Você pode exibir uma mensagem de feedback para o usuário aqui
+      alert("O login foi cancelado. Por favor, tente novamente.");
+    } else {
+      console.error("Erro na autenticação com Google: ", error);
+      throw error;
+    }
   }
 };

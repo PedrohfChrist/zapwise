@@ -3,7 +3,7 @@ const sendEventToFacebook = require("./actions/sendEventToFacebook");
 const {
   ensureContact,
   updateContactTagsOnMailchimp,
-} = require("./actions/sendEventToSellflux");
+} = require("./actions/sendEventToMailchimp");
 const cors = require("cors")({ origin: true });
 
 exports.initiateCheckout = functions.https.onRequest((req, res) => {

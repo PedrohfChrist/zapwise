@@ -1,11 +1,13 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { useSubscriptionContext } from "@/contexts/SubscriptionContext"; // Corrigir a importação aqui
+import { useSubscriptionContext } from "@/contexts/SubscriptionContext";
 import { CounterClockwiseClockIcon } from "@radix-ui/react-icons";
+import { useAuthContext } from "@/hooks/useAuthContext";
 
 export default function WarningBar({ disabled }) {
   const navigate = useNavigate();
   const { subscriptionStatus } = useSubscriptionContext();
+  const { user } = useAuthContext();
 
   const commonStyles = `text-white p-2 text-center rounded-lg flex flex-col items-center gap-2 ${
     disabled ? "opacity-50 pointer-events-none" : ""
@@ -16,6 +18,10 @@ export default function WarningBar({ disabled }) {
     top: "1rem",
     width: "fit-content",
   };
+
+  if (user.uid === "Y05s3draE8NnHgOLPlUbqLeOdlH2") {
+    return null; // Não exibir nada para o administrador
+  }
 
   const renderContent = (
     bgColor,
@@ -47,11 +53,11 @@ export default function WarningBar({ disabled }) {
     </div>
   );
 
-  if (!subscriptionStatus.isFreeTrial && !subscriptionStatus.isPaid) {
+  if (!subscriptionStatus.isPaid) {
     return renderContent(
       "bg-destructive",
       <CounterClockwiseClockIcon className="hidden sm:block" />,
-      "Seu período de teste acabou | Garanta 50% OFF assinando o plano anual",
+      "Você não tem um plano ativo | Escolha um plano para continuar usando o Copy Max",
       "Escolher plano",
       "text-destructive"
     );
@@ -61,7 +67,9 @@ export default function WarningBar({ disabled }) {
     return renderContent(
       "bg-primary",
       <CounterClockwiseClockIcon className="hidden sm:block" />,
-      " Garanta 50% OFF assinando o plano anual",
+      "Faltam " +
+        subscriptionStatus.daysLeft +
+        " dias para acabar seu trial | Garanta 50% OFF assinando o plano anual",
       "Assinar agora",
       "text-primary",
       subscriptionStatus.daysLeft

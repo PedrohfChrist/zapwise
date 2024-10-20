@@ -27,7 +27,8 @@ const monthlyPlans = [
     buttonColor: "bg-backgoundsub-foreground",
     buttonTextColor: "text-foreground",
     buttonBorderColor: "border-foreground",
-    planId: "ae5c73c3-77bf-4502-b751-80c5a8079c85",
+    hoverColor: "hover:bg-input",
+    planId: "N94585453V?off=8uo6r6kn&amp;checkoutMode=6&bid=1722453375908",
   },
   {
     name: "Plano Premium",
@@ -50,7 +51,8 @@ const monthlyPlans = [
     buttonColor: "bg-primary",
     buttonTextColor: "text-textopedro",
     buttonBorderColor: "border-border",
-    planId: "a5d04d64-948b-42bd-bd92-b950c0ee8642",
+    hoverColor: "hover:bg-[#3A72EC]",
+    planId: "N94585453V?off=ivgzq6bl&amp;checkoutMode=6",
   },
   {
     name: "Plano PRO",
@@ -76,7 +78,8 @@ const monthlyPlans = [
     buttonColor: "bg-backgoundsub-foreground",
     buttonTextColor: "text-foreground",
     buttonBorderColor: "border-foreground",
-    planId: "1a282998-2f68-4e24-8515-b1a1ad8a55e5",
+    hoverColor: "hover:bg-input",
+    planId: "N94585453V?off=of755viw&amp;checkoutMode=6&bid=1722453420259",
   },
 ];
 
@@ -102,7 +105,8 @@ const annualPlans = [
     buttonColor: "bg-backgoundsub-foreground",
     buttonTextColor: "text-foreground",
     buttonBorderColor: "border-foreground",
-    planId: "352e6d0a-0aec-49f7-92fe-56777d5bbc68",
+    hoverColor: "hover:bg-input",
+    planId: "N94585453V?off=vfnnwf8a&amp;checkoutMode=6&bid=1722453398876",
   },
   {
     name: "Plano Premium",
@@ -126,7 +130,8 @@ const annualPlans = [
     buttonColor: "bg-primary",
     buttonTextColor: "text-textopedro",
     buttonBorderColor: "border-border",
-    planId: "81dcd29a-75ee-43c3-9820-42eaeb263b2f",
+    hoverColor: "hover:bg-[#3A72EC]",
+    planId: "N94585453V?off=ekitgd45&amp;checkoutMode=6&bid=1722453264379",
   },
   {
     name: "Plano PRO",
@@ -153,7 +158,8 @@ const annualPlans = [
     buttonColor: "bg-backgoundsub-foreground",
     buttonTextColor: "text-foreground",
     buttonBorderColor: "border-foreground",
-    planId: "82c81764-13c1-4a16-ac92-dbeb07d84e1a",
+    hoverColor: "hover:bg-input",
+    planId: "N94585453V?off=z2eiypys&amp;checkoutMode=6&bid=1722453443138",
   },
 ];
 
@@ -177,7 +183,7 @@ export default function Subscription() {
   };
 
   const handleSubscription = (planId) => {
-    window.location.href = `https://pay.kirvano.com/${planId}`;
+    window.location.href = `https://pay.hotmart.com/${planId}`;
   };
 
   return (
@@ -249,7 +255,7 @@ export default function Subscription() {
                 </ul>
               </div>
               <button
-                className={`py-3 px-4 rounded-md text-sm font-medium uppercase transition duration-300 border border-bordabotao-foreground ${plan.buttonColor} ${plan.buttonTextColor} ${plan.buttonBorderColor}`}
+                className={`py-3 px-4 rounded-md text-sm font-medium uppercase transition duration-300 border border-bordabotao-foreground ${plan.buttonColor} ${plan.buttonTextColor} ${plan.buttonBorderColor} ${plan.hoverColor}`}
                 onClick={() => handleSubscription(plan.planId)}
               >
                 ASSINAR AGORA

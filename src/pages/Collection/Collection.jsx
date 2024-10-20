@@ -1,5 +1,5 @@
 import WarningBar from "@/components/WarningBar";
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { useFirestore } from "@/hooks/useFirestore";
 import {
   ClipboardCopyIcon,
@@ -17,6 +17,10 @@ import {
 } from "@/shadcn/components/ui/alert-dialog";
 import { Button } from "@/shadcn/components/ui/button";
 import { Textarea } from "@/shadcn/components/ui/textarea";
+import { useAuthContext } from "@/hooks/useAuthContext";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/firebase/config";
+import { useToast } from "@/shadcn/components/ui/use-toast"; // Importa o hook do Toast
 
 export default function Collection() {
   const [selectedProject, setSelectedProject] = useState(null);
@@ -29,6 +33,8 @@ export default function Collection() {
   } = useFirestore("savedProjects");
   const [isCopied, setIsCopied] = useState(false);
   const [isDownloaded, setIsDownloaded] = useState(false);
+  const { user } = useAuthContext();
+  const { toast } = useToast(); // Inicializa o hook do Toast
 
   const handleProjectClick = useCallback((project) => {
     setSelectedProject(project);
@@ -61,30 +67,40 @@ export default function Collection() {
   }, [deleteDocument, projectToDelete]);
 
   const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(selectedProject.generatedCopy).then(
-      () => {
-        console.log("Texto copiado para a área de transferência!");
-        setIsCopied(true);
-        setTimeout(() => setIsCopied(false), 100);
-      },
-      (err) => {
-        console.error("Erro ao copiar o texto: ", err);
-      }
-    );
-  }, [selectedProject]);
+    if (selectedProject) {
+      navigator.clipboard.writeText(selectedProject.generatedCopy).then(
+        () => {
+          // Mostrar a notificação Toast quando o texto for copiado com sucesso
+          toast({
+            title: "Texto copiado!",
+            description: "O texto foi copiado para a área de transferência.",
+            status: "success",
+            duration: 3000,
+          });
+          setIsCopied(true);
+          setTimeout(() => setIsCopied(false), 100);
+        },
+        (err) => {
+          console.error("Erro ao copiar o texto: ", err);
+        }
+      );
+    }
+  }, [selectedProject, toast]);
 
   const handleDownload = useCallback(() => {
-    const element = document.createElement("a");
-    const file = new Blob([selectedProject.generatedCopy], {
-      type: "text/plain",
-    });
-    element.href = URL.createObjectURL(file);
-    element.download = "copy.txt";
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
-    setIsDownloaded(true);
-    setTimeout(() => setIsDownloaded(false), 100);
+    if (selectedProject) {
+      const element = document.createElement("a");
+      const file = new Blob([selectedProject.generatedCopy], {
+        type: "text/plain",
+      });
+      element.href = URL.createObjectURL(file);
+      element.download = "copy.txt";
+      document.body.appendChild(element);
+      element.click();
+      document.body.removeChild(element);
+      setIsDownloaded(true);
+      setTimeout(() => setIsDownloaded(false), 100);
+    }
   }, [selectedProject]);
 
   if (error) {

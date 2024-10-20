@@ -1,6 +1,8 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const express = require("express");
+const nodemailer = require("nodemailer");
+const generatePassword = require("./utils/generatePassword");
 
 if (admin.apps.length === 0) {
   admin.initializeApp();
@@ -51,7 +53,7 @@ app.post("/", async (req, res) => {
 
     if (webhook.event === "PURCHASE_APPROVED") {
       let userRecord;
-      //Consultando a coleção "users" pelo e-mail para obter o ID
+      // Consultando a coleção "users" pelo e-mail para obter o ID
       try {
         userRecord = await auth.getUserByEmail(webhook.data.buyer.email);
       } catch (error) {
@@ -95,6 +97,7 @@ app.post("/", async (req, res) => {
           statusDate: new Date(webhook.creation_date),
           ownerId: userRecord.uid,
           ownerEmail: webhook.data.buyer.email,
+          wordsGenerated: 0, // Inicializa wordsGenerated para novo usuário
         };
 
         await db
@@ -136,7 +139,7 @@ app.post("/", async (req, res) => {
             </div>
           </div>`,
         };
-        n;
+
         await transporter.sendMail(mailOptions);
 
         return res.status(200).send("Usuário criado com sucesso.");
@@ -163,6 +166,7 @@ app.post("/", async (req, res) => {
         statusDate: new Date(webhook.creation_date),
         ownerId: userId,
         ownerEmail: webhook.data.buyer.email,
+        wordsGenerated: 0, // Resetar wordsGenerated para usuários existentes
       };
 
       await db
@@ -170,7 +174,7 @@ app.post("/", async (req, res) => {
         .doc(userId)
         .set(subscription, { merge: true });
     } else if (webhook.event === "PURCHASE_CHARGEBACK") {
-      //Consultando a coleção "users" pelo e-mail para obter o ID
+      // Consultando a coleção "users" pelo e-mail para obter o ID
       const userSnapshot = await db
         .collection("users")
         .where("email", "==", webhook.data.buyer.email)
@@ -196,7 +200,7 @@ app.post("/", async (req, res) => {
         .doc(userId)
         .set(subscription, { merge: true });
     } else if (webhook.event === "PURCHASE_CANCELED") {
-      //Consultando a coleção "users" pelo e-mail para obter o ID
+      // Consultando a coleção "users" pelo e-mail para obter o ID
       const userSnapshot = await db
         .collection("users")
         .where("email", "==", webhook.data.buyer.email)
@@ -222,12 +226,17 @@ app.post("/", async (req, res) => {
         .doc(userId)
         .set(subscription, { merge: true });
     } else if (webhook.event === "SWITCH_PLAN") {
-      //Consultando a coleção "users" pelo e-mail para obter o ID
+      // Consultando a coleção "users" pelo e-mail para obter o ID
+      const userEmail =
+        webhook.data.subscription.user.email || webhook.data.user.email;
       const userSnapshot = await db
         .collection("users")
-        .where("email", "==", webhook.data.buyer.email)
+        .where("email", "==", userEmail)
         .limit(1)
         .get();
+
+      console.log("SWITCH_PLAN", webhook);
+      console.log("User Email for SWITCH_PLAN", userEmail);
 
       // Verificar se encontrou o usuário
       if (userSnapshot.empty) {
@@ -247,6 +256,7 @@ app.post("/", async (req, res) => {
         switch_plan_date: new Date(webhook.data.switch_plan_date),
         plan: newPlan,
         oldPlan: oldPlan,
+        wordsGenerated: 0, // Resetar a contagem de palavras ao trocar de plano
       };
 
       await db
@@ -254,12 +264,17 @@ app.post("/", async (req, res) => {
         .doc(userId)
         .set(subscription, { merge: true });
     } else if (webhook.event === "SUBSCRIPTION_CANCELLATION") {
-      //Consultando a coleção "users" pelo e-mail para obter o ID
+      // Consultando a coleção "users" pelo e-mail para obter o ID
+      const userEmail =
+        webhook.data.subscriber.email || webhook.data.user.email;
       const userSnapshot = await db
         .collection("users")
-        .where("email", "==", webhook.data.buyer.email)
+        .where("email", "==", userEmail)
         .limit(1)
         .get();
+
+      console.log("SUBSCRIPTION_CANCELLATION", webhook);
+      console.log("User Email for SUBSCRIPTION_CANCELLATION", userEmail);
 
       // Verificar se encontrou o usuário
       if (userSnapshot.empty) {
@@ -280,7 +295,7 @@ app.post("/", async (req, res) => {
         .doc(userId)
         .set(subscription, { merge: true });
     } else if (webhook.event === "PURCHASE_DELAYED") {
-      //Consultando a coleção "users" pelo e-mail para obter o ID
+      // Consultando a coleção "users" pelo e-mail para obter o ID
       const userSnapshot = await db
         .collection("users")
         .where("email", "==", webhook.data.buyer.email)

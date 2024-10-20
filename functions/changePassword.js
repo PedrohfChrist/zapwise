@@ -3,7 +3,6 @@ const admin = require("firebase-admin");
 const express = require("express");
 const cors = require("cors");
 
-
 const FIREBASE_API_KEY = functions.config().project.api_key;
 
 const app = express();
@@ -23,8 +22,8 @@ const corsOptions = {
       "http://127.0.0.1:5173",
       "http://localhost:5174",
       "https://127.0.0.1:5174",
-      "https://template-90106.web.app",
-      "https://app.seudominio.com.br",
+      "https://adcraftor-8d13a.web.app",
+      "https://app.copymax.com.br",
     ];
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
-import { auth, db, googleProvider } from "../firebase/config"; // Certifique-se de que googleProvider está sendo importado corretamente
+import { auth, db, googleProvider } from "../firebase/config";
 import { useAuthContext } from "./useAuthContext";
 import { getCookie } from "@/utils/getCookie";
 import { useQuery } from "./useQuery";
@@ -60,7 +60,7 @@ export const useLogin = () => {
           }
 
           attempts++;
-          await new Promise((resolve) => setTimeout(resolve, 1000)); // Espera 1 segundo entre tentativas
+          await new Promise((resolve) => setTimeout(resolve, 1000));
         }
 
         if (attempts === maxAttempts) {

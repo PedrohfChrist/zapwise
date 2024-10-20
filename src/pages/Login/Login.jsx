@@ -30,11 +30,12 @@ export default function Login() {
   useEffect(() => {
     if (!error) return;
 
+    let errorMsg = "Erro ao fazer login. Tente novamente.";
     if (error.includes("auth/invalid-login-credentials")) {
-      setErrorMsg(
-        "As credenciais fornecidas estão incorretas ou o e-mail está vinculado ao login com Google. Clique no botão 'Entrar com a conta Google'."
-      );
+      errorMsg =
+        "As credenciais fornecidas estão incorretas ou o e-mail está vinculado ao login com Google. Clique no botão 'Entrar com a conta Google'.";
     }
+    setErrorMsg(errorMsg);
   }, [error]);
 
   return (
@@ -76,6 +77,16 @@ export default function Login() {
               ? "Entrando..."
               : "Entrar com a conta Google"}
           </Button>
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t"></span>
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-primary-foreground px-2 text-muted-foreground">
+                Ou continue com
+              </span>
+            </div>
+          </div>
           <form className="mt-10" onSubmit={handleLogin}>
             <p className="mt-5 text-muted-foreground mb-2.5 text-sm md:text-md">
               E-mail

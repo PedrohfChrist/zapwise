@@ -27,6 +27,8 @@ import {
 } from "@/shadcn/components/ui/alert-dialog";
 import { TrashIcon, PlusIcon, PersonIcon } from "@radix-ui/react-icons";
 import { usePersonas } from "@/contexts/PersonaContext";
+import { useAuthContext } from "@/hooks/useAuthContext";
+import { useSubscriptionContext } from "@/contexts/SubscriptionContext";
 
 export default function Persona() {
   const {
@@ -36,6 +38,8 @@ export default function Persona() {
     deleteDocument,
     selectPersona,
   } = usePersonas();
+  const { user } = useAuthContext(); // Obtém o usuário autenticado
+  const { subscriptionStatus } = useSubscriptionContext(); // Obtém o status da assinatura
   const [selectedPersona, setSelectedPersona] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isAlertDialogOpen, setIsAlertDialogOpen] = useState(false);
@@ -60,6 +64,13 @@ export default function Persona() {
   };
 
   const handleAddPersona = () => {
+    if (
+      !subscriptionStatus.isPaid &&
+      user.uid !== "Y05s3draE8NnHgOLPlUbqLeOdlH2"
+    ) {
+      alert("Você precisa de um plano ativo para adicionar personas.");
+      return;
+    }
     console.log("Adding persona:", newPersona); // Log de depuração
     addDocument(newPersona).then((res) => {
       if (res.type === "SUCCESS") {
@@ -88,6 +99,13 @@ export default function Persona() {
   };
 
   const handleSaveEditPersona = () => {
+    if (
+      !subscriptionStatus.isPaid &&
+      user.uid !== "Y05s3draE8NnHgOLPlUbqLeOdlH2"
+    ) {
+      alert("Você precisa de um plano ativo para editar personas.");
+      return;
+    }
     if (selectedPersona !== null) {
       const personaId = personas[selectedPersona].id;
       console.log("Updating persona:", personaId, newPersona); // Log de depuração
@@ -183,7 +201,10 @@ export default function Persona() {
         </div>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent
+            aria-describedby="dialog-description"
+            className="max-w-2xl"
+          >
             <DialogHeader>
               <DialogTitle>
                 {selectedPersona !== null
@@ -191,7 +212,7 @@ export default function Persona() {
                   : "Adicionar nova persona"}
               </DialogTitle>
             </DialogHeader>
-            <div className="flex flex-col gap-4">
+            <div id="dialog-description" className="flex flex-col gap-4">
               <label>
                 Qual o nome do seu produto?
                 <Input
@@ -200,6 +221,10 @@ export default function Persona() {
                   value={newPersona.name}
                   onChange={handleInputChange}
                   className="p-2 rounded-md focus-visible:ring-offset-0 focus-visible:ring-0 focus:border-primary"
+                  disabled={
+                    !subscriptionStatus.isPaid &&
+                    user.uid !== "Y05s3draE8NnHgOLPlUbqLeOdlH2"
+                  }
                 />
               </label>
               <label>
@@ -210,6 +235,10 @@ export default function Persona() {
                   value={newPersona.niche}
                   onChange={handleInputChange}
                   className="p-2 rounded-md focus-visible:ring-offset-0 focus-visible:ring-0 focus:border-primary"
+                  disabled={
+                    !subscriptionStatus.isPaid &&
+                    user.uid !== "Y05s3draE8NnHgOLPlUbqLeOdlH2"
+                  }
                 />
               </label>
               <label>
@@ -220,6 +249,10 @@ export default function Persona() {
                   value={newPersona.subnicho}
                   onChange={handleInputChange}
                   className="p-2 rounded-md focus-visible:ring-offset-0 focus-visible:ring-0 focus:border-primary"
+                  disabled={
+                    !subscriptionStatus.isPaid &&
+                    user.uid !== "Y05s3draE8NnHgOLPlUbqLeOdlH2"
+                  }
                 />
               </label>
               <label>
@@ -228,6 +261,10 @@ export default function Persona() {
                   value={newPersona.targetAge}
                   onValueChange={(value) =>
                     handleSelectChange("targetAge", value)
+                  }
+                  disabled={
+                    !subscriptionStatus.isPaid &&
+                    user.uid !== "Y05s3draE8NnHgOLPlUbqLeOdlH2"
                   }
                 >
                   <SelectTrigger className="p-2 rounded-md focus:border-primary">
@@ -250,6 +287,10 @@ export default function Persona() {
                   onValueChange={(value) =>
                     handleSelectChange("targetGender", value)
                   }
+                  disabled={
+                    !subscriptionStatus.isPaid &&
+                    user.uid !== "Y05s3draE8NnHgOLPlUbqLeOdlH2"
+                  }
                 >
                   <SelectTrigger className="p-2 rounded-md focus:border-primary">
                     <SelectValue placeholder="Selecione o gênero" />
@@ -269,6 +310,10 @@ export default function Persona() {
                   value={newPersona.mainPromise}
                   onChange={handleInputChange}
                   className="p-2 rounded-md focus-visible:ring-offset-0 focus-visible:ring-0 focus:border-primary resize-none "
+                  disabled={
+                    !subscriptionStatus.isPaid &&
+                    user.uid !== "Y05s3draE8NnHgOLPlUbqLeOdlH2"
+                  }
                 />
               </label>
               <label>
@@ -279,6 +324,10 @@ export default function Persona() {
                   value={newPersona.rootProblem}
                   onChange={handleInputChange}
                   className="p-2 rounded-md focus-visible:ring-offset-0 focus-visible:ring-0 focus:border-primary resize-none"
+                  disabled={
+                    !subscriptionStatus.isPaid &&
+                    user.uid !== "Y05s3draE8NnHgOLPlUbqLeOdlH2"
+                  }
                 />
               </label>
               <label>
@@ -289,6 +338,10 @@ export default function Persona() {
                   value={newPersona.mechanism}
                   onChange={handleInputChange}
                   className="p-2 rounded-md focus-visible:ring-offset-0 focus-visible:ring-0 focus:border-primary resize-none"
+                  disabled={
+                    !subscriptionStatus.isPaid &&
+                    user.uid !== "Y05s3draE8NnHgOLPlUbqLeOdlH2"
+                  }
                 />
               </label>
               <Button

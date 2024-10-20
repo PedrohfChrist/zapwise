@@ -10,6 +10,8 @@ import {
   SelectItem,
 } from "@/shadcn/components/ui/select";
 import { useFirestore } from "@/hooks/useFirestore";
+import { doc, updateDoc, increment, getDoc } from "firebase/firestore";
+import { db } from "@/firebase/config";
 import {
   ChevronDownIcon,
   ClipboardCopyIcon,
@@ -20,6 +22,8 @@ import {
 import WarningBar from "./WarningBar";
 import { Link } from "react-router-dom";
 import { usePersonas } from "@/contexts/PersonaContext";
+import { useAuthContext } from "@/hooks/useAuthContext";
+import { useSubscriptionContext } from "@/contexts/SubscriptionContext"; // Importa o contexto de assinatura
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -27,10 +31,15 @@ import {
   DropdownMenuItem,
 } from "@/shadcn/components/ui/dropdown-menu";
 import { callOpenAIApi } from "@/utils/openaiApi";
+import Typed from "typed.js";
 
 const CopyModule = ({ moduleType, fields, promptTemplate, initialData }) => {
+  const { user } = useAuthContext(); // Obtém o usuário autenticado
+  const { subscriptionStatus } = useSubscriptionContext(); // Obtém o status da assinatura
+
   const { personas, selectedPersona, selectPersona, clearSelectedPersona } =
     usePersonas();
+
   const [formData, setFormData] = useState(
     initialData ||
       fields.reduce((acc, field) => {
@@ -43,25 +52,27 @@ const CopyModule = ({ moduleType, fields, promptTemplate, initialData }) => {
   );
   const [displayedCopy, setDisplayedCopy] = useState(
     initialData?.generatedCopy || ""
-  ); // Estado para o efeito de digitação
+  );
   const [error, setError] = useState(null);
   const { addDocument, response } = useFirestore("copies");
-  const { addDocument: saveProject } = useFirestore("savedProjects"); // Função para salvar projeto
-  const [isCopied, setIsCopied] = useState(false); // Estado para o efeito de cópia
-  const [isDownloaded, setIsDownloaded] = useState(false); // Estado para o efeito de download
-  const [isLoading, setIsLoading] = useState(false); // Estado para carregamento
-  const [isSaved, setIsSaved] = useState(false); // Estado para indicar se o projeto foi salvo
+  const { addDocument: saveProject } = useFirestore("savedProjects");
+  const [isCopied, setIsCopied] = useState(false);
+  const [isDownloaded, setIsDownloaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const typedRef = useRef(null);
 
-  const timerRef = useRef(null); // Usar useRef para manter a referência do timer
+  const canAccess = subscriptionStatus.isPaid || subscriptionStatus.isAdmin; // Verifica se o usuário pode acessar
 
   useEffect(() => {
-    window.scrollTo(0, 0); // Scroll to the top of the page
+    window.scrollTo(0, 0); // Scroll para o topo da página
   }, []);
 
   useEffect(() => {
     if (generatedCopy) {
       smoothScrollToTop();
-      setIsSaved(false); // Reabilita o botão de salvar para novas cópias
+      setIsSaved(false);
+      typeCopy(generatedCopy);
     }
   }, [generatedCopy]);
 
@@ -115,53 +126,37 @@ const CopyModule = ({ moduleType, fields, promptTemplate, initialData }) => {
   };
 
   const handleSubmit = async () => {
+    if (!canAccess) {
+      setError("Você precisa de um plano ativo para usar esta funcionalidade.");
+      return;
+    }
+
     setError(null);
-    setDisplayedCopy(""); // Reseta o estado de exibição da copy
-    setIsLoading(true); // Inicia o estado de carregamento
+    setDisplayedCopy("");
+    setIsLoading(true);
+
     try {
       const prompt = promptTemplate.replace(
         /\{(\w+)\}/g,
         (_, key) => formData[key] || ""
       );
-      console.log("Prompt:", prompt); // Log do prompt para depuração
-      const generatedCopy = await callOpenAIApi(prompt);
-      console.log("Generated Copy:", generatedCopy); // Log da copy gerada para depuração
+      const generatedCopy = await callOpenAIApi(prompt, user.uid);
       setGeneratedCopy(generatedCopy);
-      typeCopy(generatedCopy); // Chama a função para exibir a copy gradualmente
 
-      // Garantir que moduleType seja uma string
-      const moduleTypeString =
-        typeof moduleType === "string"
-          ? moduleType
-          : Array.isArray(moduleType)
-          ? moduleType.join(" | ")
-          : typeof moduleType === "object"
-          ? moduleType.type.name || "UnknownType"
-          : "UnknownType";
-
-      // Filtrar os dados antes de adicionar ao Firestore
-      const dataToSave = {
-        ...formData,
-        moduleType: moduleTypeString,
-        generatedCopy,
-        createdAt: new Date(),
-      };
-
-      console.log("Document Data to Save:", dataToSave);
-      const result = await addDocument(dataToSave);
-      console.log("Document added:", result);
-      if (response.success) {
-        // Handle success
-      }
+      setIsLoading(false);
     } catch (error) {
       console.error("Erro ao gerar a copy:", error);
       setError(error.message);
-    } finally {
-      setIsLoading(false); // Finaliza o estado de carregamento
+      setIsLoading(false);
     }
   };
 
   const handleSaveProject = async () => {
+    if (!canAccess) {
+      setError("Você precisa de um plano ativo para usar esta funcionalidade.");
+      return;
+    }
+
     setError(null);
     try {
       const moduleTypeString =
@@ -180,11 +175,9 @@ const CopyModule = ({ moduleType, fields, promptTemplate, initialData }) => {
         createdAt: new Date(),
       };
 
-      console.log("Document Data to Save:", dataToSave);
       const result = await saveProject(dataToSave);
-      console.log("Project saved:", result);
       if (result && result.type === "SUCCESS") {
-        setIsSaved(true); // Indica que o projeto foi salvo
+        setIsSaved(true);
       }
     } catch (error) {
       console.error("Erro ao salvar o projeto:", error);
@@ -193,26 +186,22 @@ const CopyModule = ({ moduleType, fields, promptTemplate, initialData }) => {
   };
 
   const typeCopy = (text) => {
-    let index = 0;
-    const speed = 20; // Ajuste a velocidade aqui (em milissegundos)
-
-    // Pausa inicial de 50ms para evitar bug inicial
-    setTimeout(() => {
-      timerRef.current = setInterval(() => {
-        setDisplayedCopy((prev) => prev + text.charAt(index));
-        index++;
-        if (index === text.length) {
-          clearInterval(timerRef.current);
-          setIsLoading(false); // Finaliza o estado de carregamento
-        }
-      }, speed);
-    }, 50);
+    if (typedRef.current) {
+      typedRef.current.destroy();
+    }
+    typedRef.current = new Typed("#displayedCopy", {
+      strings: [text],
+      typeSpeed: 10,
+      showCursor: false,
+      onComplete: () => {
+        setIsLoading(false);
+      },
+    });
   };
 
   const handleCopy = () => {
     navigator.clipboard.writeText(displayedCopy).then(
       () => {
-        console.log("Texto copiado para a área de transferência!");
         setIsCopied(true);
         setTimeout(() => setIsCopied(false), 100);
       },
@@ -247,6 +236,8 @@ const CopyModule = ({ moduleType, fields, promptTemplate, initialData }) => {
       <div className="flex flex-col sm:flex-row sm:space-x-6 mt-4">
         <div className="w-full sm:w-2/5 p-5 rounded-lg shadow-md flex flex-col bg-background mb-4 sm:mb-0">
           <h1 className="text-xl font-semibold mb-6">{moduleType}</h1>
+
+          {/* Dropdown de Personas */}
           <div className="mb-5">
             <DropdownMenu>
               <DropdownMenuTrigger className="py-2 px-2 rounded-md flex items-center gap-2 bg-primary text-white focus-visible:outline-none hover:bg-primary/90">
@@ -267,6 +258,7 @@ const CopyModule = ({ moduleType, fields, promptTemplate, initialData }) => {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+
           {fields.map((field) => (
             <div key={field.name} className="mb-4">
               <label className="block text-sm font-medium mb-1">
@@ -278,11 +270,7 @@ const CopyModule = ({ moduleType, fields, promptTemplate, initialData }) => {
                   placeholder={field.placeholder}
                   value={formData[field.name] || ""}
                   onChange={handleChange}
-                  className={`w-full p-3 rounded-md focus-visible:ring-offset-0 focus-visible:ring-0 focus:border-primary border placeholder-foreground/60 ${
-                    selectedPersona && selectedPersona[field.name]
-                      ? "bg-muted"
-                      : ""
-                  }`}
+                  disabled={!canAccess} // Desabilita se o plano não for ativo
                 />
               )}
               {field.type === "textarea" && (
@@ -291,12 +279,8 @@ const CopyModule = ({ moduleType, fields, promptTemplate, initialData }) => {
                   placeholder={field.placeholder}
                   value={formData[field.name] || ""}
                   onChange={handleChange}
-                  className={`w-full p-3 rounded-md focus-visible:ring-offset-0 focus-visible:ring-0 focus:border-primary border placeholder-foreground/60 resize-none ${
-                    selectedPersona && selectedPersona[field.name]
-                      ? "bg-muted"
-                      : ""
-                  } ${field.size}`}
-                  style={{ resize: "none", overflowY: "auto" }}
+                  disabled={!canAccess} // Desabilita se o plano não for ativo
+                  className="w-full p-3 rounded-md focus-visible:ring-offset-0 focus-visible:ring-0 focus:border-primary border placeholder-foreground/60 resize-none"
                 />
               )}
               {field.type === "select" && (
@@ -305,14 +289,9 @@ const CopyModule = ({ moduleType, fields, promptTemplate, initialData }) => {
                   onValueChange={(value) =>
                     handleSelectChange(field.name, value)
                   }
+                  disabled={!canAccess} // Desabilita se o plano não for ativo
                 >
-                  <SelectTrigger
-                    className={`w-full p-3 rounded-md focus:border-primary border ${
-                      selectedPersona && selectedPersona[field.name]
-                        ? "bg-muted"
-                        : ""
-                    }`}
-                  >
+                  <SelectTrigger className="w-full p-3 rounded-md focus:border-primary border">
                     <SelectValue placeholder={field.placeholder} />
                   </SelectTrigger>
                   <SelectContent>
@@ -330,7 +309,7 @@ const CopyModule = ({ moduleType, fields, promptTemplate, initialData }) => {
           <Button
             onClick={handleSubmit}
             className="w-full py-2 mt-auto text-white rounded-md"
-            disabled={isLoading} // Desabilita o botão enquanto está carregando
+            disabled={!canAccess || isLoading}
           >
             {isLoading ? "Carregando..." : "Gerar o conteúdo"}
           </Button>
@@ -340,13 +319,11 @@ const CopyModule = ({ moduleType, fields, promptTemplate, initialData }) => {
             Resposta do CopyMax
           </h2>
           <div className="w-full flex-grow">
-            <textarea
+            <div
+              id="displayedCopy"
               className="w-full h-full p-4 rounded-md border focus:border-primary focus:outline-none bg-transparent resize-none"
-              placeholder="A resposta gerada será exibida aqui..."
-              style={{ resize: "none", overflowY: "auto", minHeight: "200px" }}
-              value={displayedCopy}
-              onChange={handleTextareaChange}
-            />
+              style={{ minHeight: "200px", whiteSpace: "pre-wrap" }}
+            ></div>
           </div>
           <div className="flex justify-center space-x-2 mt-2 sm:justify-end">
             <button
@@ -354,6 +331,7 @@ const CopyModule = ({ moduleType, fields, promptTemplate, initialData }) => {
               className={`py-2 px-3 rounded-md text-base font-normal border border-border flex items-center gap-2 transform transition-shadow duration-200 hover:shadow-md ${
                 isCopied ? "border-foreground" : ""
               }`}
+              disabled={!canAccess}
             >
               <ClipboardCopyIcon />
               Cópia
@@ -363,14 +341,15 @@ const CopyModule = ({ moduleType, fields, promptTemplate, initialData }) => {
               className={`py-2 px-3 rounded-md text-base font-normal border border-border flex items-center gap-2 transform transition-shadow duration-200 hover:shadow-md ${
                 isDownloaded ? "border-foreground" : ""
               }`}
+              disabled={!canAccess}
             >
               <DownloadIcon />
               Download
             </button>
             <Button
               onClick={handleSaveProject}
-              className={`py-2 px-3 rounded-md text-base font-normal text-white border border-border flex items-center gap-2 transform transition-shadow duration-200 hover:shadow-md`}
-              disabled={isSaved || !generatedCopy} // Desabilita o botão quando salvo ou sem conteúdo
+              className="py-2 px-3 rounded-md text-base font-normal text-white border border-border flex items-center gap-2 transform transition-shadow duration-200 hover:shadow-md"
+              disabled={!canAccess || isSaved || !generatedCopy}
             >
               <BookmarkIcon />
               {isSaved ? "Salvo" : "Salvar"}

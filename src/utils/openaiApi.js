@@ -1,25 +1,29 @@
 // src/utils/openaiApi.js
 import axios from "axios";
+import { doc, updateDoc, increment } from "firebase/firestore"; // Certifique-se de importar as funções necessárias
+import { db } from "@/firebase/config"; // Importar a configuração correta do Firestore
 
-// Obtenha a chave da API do OpenAI a partir das variáveis de ambiente
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
-
 const MAX_RETRIES = 5;
 const INITIAL_RETRY_DELAY = 2000; // 2 segundos
 
-// Função para chamar a API do OpenAI com o modelo GPT-4o
 export const callOpenAIApi = async (
   prompt,
-  maxTokens = 2000, // Aumentado para 500 tokens
+  userId,
+  maxTokens = 2000,
   temperature = 0.7
 ) => {
+  if (!userId) {
+    throw new Error("O ID do usuário não foi fornecido.");
+  }
+
   let retryDelay = INITIAL_RETRY_DELAY;
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
       const response = await axios.post(
         "https://api.openai.com/v1/chat/completions",
         {
-          model: "gpt-4o", // Alterado para GPT-4o
+          model: "gpt-4",
           messages: [{ role: "user", content: prompt }],
           max_tokens: maxTokens,
           temperature: temperature,
@@ -32,7 +36,18 @@ export const callOpenAIApi = async (
         }
       );
 
-      return response.data.choices[0].message.content;
+      const generatedText = response.data.choices[0].message.content;
+
+      // Contar palavras geradas
+      const wordCount = generatedText.split(" ").length;
+
+      // Atualizar palavras geradas no Firestore
+      const userRef = doc(db, "users", userId);
+      await updateDoc(userRef, {
+        wordsGenerated: increment(wordCount),
+      });
+
+      return generatedText;
     } catch (error) {
       if (
         error.response &&

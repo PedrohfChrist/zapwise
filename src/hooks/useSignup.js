@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { doc, setDoc, arrayUnion } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore";
 import { auth, db, timestamp } from "../firebase/config";
-import { useFirestore } from "./useFirestore";
 import { useAuthContext } from "./useAuthContext";
 
 export const useSignup = () => {
@@ -10,7 +9,6 @@ export const useSignup = () => {
   const [error, setError] = useState(null);
   const [isPending, setIsPending] = useState(false);
   const { dispatch } = useAuthContext();
-  const { updateDocument } = useFirestore("users");
 
   const signup = async (email, password, name) => {
     setError(null);
@@ -30,12 +28,13 @@ export const useSignup = () => {
 
       // Create a user document
       const createdAt = timestamp;
-      setDoc(doc(db, "users", res.user.uid), {
+      await setDoc(doc(db, "users", res.user.uid), {
         id: res.user.uid,
         online: true,
         createdAt,
         email: email,
         name: name,
+        wordsGenerated: 0, // Adiciona o campo wordsGenerated com valor inicial de 0
       });
 
       // Dispatch login action
