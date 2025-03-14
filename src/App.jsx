@@ -4,33 +4,12 @@ import Topbar from "./components/TopBar";
 import Sidebar from "./components/Sidebar";
 import Home from "./pages/Home/Home";
 import Login from "./pages/Login/Login";
-import Signup from "./pages/Signup/Signup";
 import PasswordRecovery from "./pages/Recover/Recover";
 import { ThemeProvider } from "./providers/ThemeProvider";
 import { useAuthContext } from "./hooks/useAuthContext";
 import Loading from "./components/Loading";
 import Account from "./pages/Account/Account";
-import History from "./pages/HystoryProjects/History";
-import Collection from "./pages/Collection/Collection";
-import Persona from "./pages/Persona/Persona";
-import Subscription from "./pages/Subscription/Subscription";
-import FbAdsTitle from "./modules/Anúncios/FbAdsTitle";
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
-import FbAdsText from "./modules/Anúncios/FbAdsText";
-import FbVideoAds from "./modules/Anúncios/FbVideoAds";
-import EmailBoletoGerado from "./modules/Email/EmailBoletoGerado";
-import EmailCarrinhoAbandonado from "./modules/Email/EmailCarrinhoAbandonado";
-import MecanismoUnico from "./modules/Oferta/MecanismoUnico";
-import Niche from "./modules/Oferta/Niche";
-import ProductName from "./modules/Oferta/ProductName";
-import PromessaPrincipal from "./modules/Oferta/PromessaPrincipal";
-import Depoimentos from "./modules/Páginas/Depoimentos";
-import LeadingPage from "./modules/Páginas/LeadingPage";
-import SalesPage from "./modules/Páginas/SalesPage";
-import ThanksPage from "./modules/Páginas/ThanksPage";
-import VslScript from "./modules/VSL/VslScript";
-import VslUpsell from "./modules/VSL/VslUpsell";
-import { PersonaProvider } from "./contexts/PersonaContext";
 import useMediaQuery from "./hooks/useMediaQuery";
 import { Toaster } from "@/shadcn/components/ui/toaster";
 import { UserDocProvider } from "@/contexts/UserDocContext";
@@ -38,51 +17,57 @@ import ReactPixel from "react-facebook-pixel";
 import { getUniqueId } from "@/utils/getUniqueId";
 import { getCookie, setCookie } from "@/utils/getCookie";
 import { hashString } from "@/utils/hashString";
-import Help from "./pages/Help/Help"; // Importando o componente Help
+import Help from "./pages/Help/Help";
+import Config from "./pages/Config/Config";
+import Fluxos from "./pages/Fluxos/Fluxos";
+import NovoFluxo from "./pages/Fluxos/NovoFluxo";
+import NovoFluxoConfig from "./pages/Fluxos/NovoFluxoConfig";
+import Automações from "./pages/Automacoes/Automacoes";
+import ManualTwilioSetupPage from "./pages/TwilioSetup/ManualTwilioSetupPage";
+import Chat from "./pages/Chat/Chat";
+import { useFCM } from "@/hooks/useFCM";
+import ExclusaoDados from "./components/ExclusaoDados";
 
 function App() {
+  // [1] Inicializa Facebook Pixel e tracking (somente em produção)
   useEffect(() => {
     if (process.env.NODE_ENV === "development") return;
 
-    const options = {
-      autoConfig: true,
-      debug: true,
-    };
-
+    const options = { autoConfig: true, debug: true };
     const uniqueEventId = getUniqueId();
-
     ReactPixel.init("512659814615709", {}, options);
-    fbq("track", "PageView", {}, { eventID: uniqueEventId });
-
+    // eslint-disable-next-line no-undef
+    if (window.fbq) {
+      fbq("track", "PageView", {}, { eventID: uniqueEventId });
+    } else {
+      console.warn(
+        "fbq não está definido – verifique se o script do Facebook Pixel foi carregado."
+      );
+    }
     const fbp = getCookie("_fbp");
     const fbc = getCookie("_fbc");
 
-    fetch(
-      "https://us-central1-adcraftor-8d13a.cloudfunctions.net/facebookCapi",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          event_name: "PageView",
-          fbp: fbp,
-          fbc: fbc,
-          event_id: uniqueEventId,
-          action_source: "website",
-          event_source_url: window.location.href.split("?")[0],
-          user_agent: navigator.userAgent,
-        }),
-      }
-    )
+    fetch("https://facebookcapi-sfveflcfxq-uc.a.run.app", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event_name: "PageView",
+        fbp,
+        fbc,
+        event_id: uniqueEventId,
+        action_source: "website",
+        event_source_url: window.location.href.split("?")[0],
+        user_agent: navigator.userAgent,
+      }),
+    })
       .then((response) => response.json())
-      .then((data) => console.log(data))
+      .then((data) => console.log("FB CAPI resp:", data))
       .catch((error) => console.error("Houve um erro no envio:", error));
   }, []);
 
+  // [2] Captura parâmetros UTM da URL
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-
     const parameters = [
       "utm_source",
       "utm_medium",
@@ -95,9 +80,7 @@ function App() {
 
     parameters.forEach((param) => {
       const value = urlParams.get(param);
-      if (value) {
-        setCookie(param, value, 60);
-      }
+      if (value) setCookie(param, value, 60);
     });
   }, [window.location.search]);
 
@@ -106,48 +89,43 @@ function App() {
 
 function AppRoutes() {
   const { user, authIsReady } = useAuthContext();
+
+  // Chama o hook incondicionalmente (o próprio hook checa se há user)
+  useFCM(user);
+
   const [rerender, setRerender] = useState(false);
   const isMobile = useMediaQuery("(max-width: 640px)");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const handleMenuClick = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
+  const handleMenuClick = () => setIsSidebarOpen(!isSidebarOpen);
+  const handleCloseSidebar = () => setIsSidebarOpen(false);
 
-  const handleCloseSidebar = () => {
-    setIsSidebarOpen(false);
-  };
-
+  // [3] Inicialização do Facebook Pixel para usuário logado
   useEffect(() => {
     if (process.env.NODE_ENV === "development") return;
-
     if (authIsReady && user && !sessionStorage.getItem("pixelInitialized")) {
       const advancedMatching = {
         em: hashString(user.email),
         external_id: hashString(user.uid, false),
       };
-      const options = {
-        autoConfig: true,
-        debug: false,
-      };
+      const options = { autoConfig: true, debug: false };
       ReactPixel.init("512659814615709", advancedMatching, options);
       ReactPixel.pageView();
-
       sessionStorage.setItem("pixelInitialized", "true");
     }
   }, [authIsReady, user]);
 
   if (!authIsReady) return <Loading />;
 
-  return (
-    <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
-      <div className="App flex flex-col sm:flex-row">
-        <Toaster />
-        <BrowserRouter>
-          {user ? (
-            <UserDocProvider user={user}>
-              <SubscriptionProvider user={user}>
-                <PersonaProvider>
+  if (user) {
+    return (
+      <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+        <div className="App flex flex-col sm:flex-row">
+          <Toaster />
+          <BrowserRouter>
+            {user ? (
+              <UserDocProvider user={user}>
+                <SubscriptionProvider user={user}>
                   {isMobile ? (
                     <>
                       <Topbar onMenuClick={handleMenuClick} />
@@ -176,80 +154,54 @@ function AppRoutes() {
                       />
                       <Route path="/help" element={<Help />} />
                       <Route path="*" element={<Home />} />
-                      <Route path="/history" element={<History />} />
-                      <Route path="/collection" element={<Collection />} />
-                      <Route path="/persona" element={<Persona />} />
-                      <Route path="/subscription" element={<Subscription />} />
+                      <Route path="/fluxos" element={<Fluxos />} />
+                      <Route path="/fluxos/novo" element={<NovoFluxo />} />
                       <Route
-                        path="/create/fb-ads-title"
-                        element={<FbAdsTitle />}
+                        path="/fluxos/config/:fluxoId"
+                        element={<NovoFluxoConfig />}
+                      />
+                      <Route path="/config" element={<Config />} />
+                      <Route path="/automacoes" element={<Automações />} />
+                      <Route path="/chat" element={<Chat />} />
+                      <Route
+                        path="/manual-twilio-setup"
+                        element={<ManualTwilioSetupPage />}
                       />
                       <Route
-                        path="/create/fb-ads-text"
-                        element={<FbAdsText />}
-                      />
-                      <Route
-                        path="/create/video-ads"
-                        element={<FbVideoAds />}
-                      />
-                      <Route
-                        path="/create/pagina-vendas"
-                        element={<SalesPage />}
-                      />
-                      <Route
-                        path="/create/pagina-captura"
-                        element={<LeadingPage />}
-                      />
-                      <Route
-                        path="/create/pagina-agradecimento"
-                        element={<ThanksPage />}
-                      />
-                      <Route
-                        path="/create/depoimentos"
-                        element={<Depoimentos />}
-                      />
-                      <Route
-                        path="/create/roteiro-vsl"
-                        element={<VslScript />}
-                      />
-                      <Route
-                        path="/create/roteiro-vsl-upsell"
-                        element={<VslUpsell />}
-                      />
-                      <Route
-                        path="/create/email-carrinho-abandonado"
-                        element={<EmailCarrinhoAbandonado />}
-                      />
-                      <Route
-                        path="/create/email-boleto"
-                        element={<EmailBoletoGerado />}
-                      />
-                      <Route
-                        path="/create/oferta-nome"
-                        element={<ProductName />}
-                      />
-                      <Route path="/create/oferta-nicho" element={<Niche />} />
-                      <Route
-                        path="/create/oferta-mecanismo"
-                        element={<MecanismoUnico />}
-                      />
-                      <Route
-                        path="/create/oferta-promessa"
-                        element={<PromessaPrincipal />}
+                        path="/excluir-dados"
+                        element={<ExclusaoDados />}
                       />
                     </Routes>
                   </div>
-                </PersonaProvider>
-              </SubscriptionProvider>
-            </UserDocProvider>
-          ) : (
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/password/recovery" element={<PasswordRecovery />} />
-              <Route path="*" element={<Signup />} />
-            </Routes>
-          )}
+                </SubscriptionProvider>
+              </UserDocProvider>
+            ) : (
+              <Routes>
+                <Route path="/login" element={<Login />} />
+
+                <Route
+                  path="/password/recovery"
+                  element={<PasswordRecovery />}
+                />
+                <Route path="*" element={<Login />} />
+              </Routes>
+            )}
+          </BrowserRouter>
+        </div>
+      </ThemeProvider>
+    );
+  }
+
+  return (
+    <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+      <div className="App flex flex-col sm:flex-row">
+        <Toaster />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/password/recovery" element={<PasswordRecovery />} />
+            <Route path="*" element={<Login />} />
+          </Routes>
         </BrowserRouter>
       </div>
     </ThemeProvider>

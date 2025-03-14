@@ -40,7 +40,8 @@
         ".git",
         "firebase-debug.log",
         "firebase-debug.*.log"
-      ]
+      ],
+      "secrets": ["FACEBOOK_ACCESS_TOKEN", "MY_FIREBASE_API_KEY"]
     }
   ]
 }

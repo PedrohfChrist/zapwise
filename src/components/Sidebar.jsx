@@ -8,10 +8,10 @@ import {
   DashboardIcon,
   PersonIcon,
   CounterClockwiseClockIcon,
-  BookmarkIcon,
-  AvatarIcon,
-  BackpackIcon,
   Cross2Icon,
+  GearIcon,
+  ShuffleIcon,
+  MagicWandIcon,
 } from "@radix-ui/react-icons";
 import Logo from "./Logo";
 import { Separator } from "@/shadcn/components/ui/separator";
@@ -27,6 +27,15 @@ export default function Sidebar({ rerender, isOpen, onClose }) {
   const { pathname } = useLocation();
   const { logout } = useLogout();
   const { user } = useAuthContext();
+
+  // Verifica se o usuário está carregado
+  if (!user) {
+    return null; // Ou renderize um estado de carregamento
+  }
+
+  const displayName = user.displayName || "Usuário";
+  const initials = getInitials(displayName);
+  const firstName = displayName.split(" ")[0];
 
   const isSelected = (path) => {
     return pathname === path;
@@ -48,6 +57,7 @@ export default function Sidebar({ rerender, isOpen, onClose }) {
 
   return (
     <>
+      {/* Código para mobile */}
       <div
         className={`fixed inset-0 z-50 transition-opacity duration-300 ${
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
@@ -72,11 +82,11 @@ export default function Sidebar({ rerender, isOpen, onClose }) {
             <Avatar>
               <AvatarImage src={user.photoURL} />
               <AvatarFallback className="bg-primary/50 text-white">
-                {getInitials(user.displayName)}
+                {initials}
               </AvatarFallback>
             </Avatar>
             <div>
-              <p className="font-medium">{user.displayName.split(" ")[0]}</p>
+              <p className="font-medium">{firstName}</p>
               <p className="text-sm text-muted-foreground/75">
                 Premium account
               </p>
@@ -91,37 +101,48 @@ export default function Sidebar({ rerender, isOpen, onClose }) {
               onClick={() => handleNavigation("/")}
             >
               <DashboardIcon className="text-foreground" />
-              <span>Modelos</span>
+              <span>Visão Geral</span>
             </div>
             <div
               role="button"
               className={`py-2 px-3 flex items-center gap-3 cursor-pointer ${
-                isSelected("/history") ? "bg-muted" : "hover:bg-muted/60"
+                isSelected("/fluxos") ? "bg-muted" : "hover:bg-muted/60"
               } mt-2 rounded-sm`}
-              onClick={() => handleNavigation("/history")}
+              onClick={() => handleNavigation("/fluxos")}
+            >
+              <ShuffleIcon className="text-foreground" />
+              <span>Fluxos</span>
+            </div>
+            <div
+              role="button"
+              className={`py-2 px-3 flex items-center gap-3 cursor-pointer ${
+                isSelected("/automacoes") ? "bg-muted" : "hover:bg-muted/60"
+              } mt-2 rounded-sm`}
+              onClick={() => handleNavigation("/automacoes")}
+            >
+              <MagicWandIcon className="text-foreground" />
+              <span>Automações por I.A</span>
+            </div>
+            <div
+              role="button"
+              className={`py-2 px-3 flex items-center gap-3 cursor-pointer ${
+                isSelected("/chat") ? "bg-muted" : "hover:bg-muted/60"
+              } mt-2 rounded-sm`}
+              onClick={() => handleNavigation("/chat")}
             >
               <CounterClockwiseClockIcon className="text-foreground" />
-              <span>Histórico</span>
+              <span>Chat WhatsApp</span>
             </div>
+
             <div
               role="button"
               className={`py-2 px-3 flex items-center gap-3 cursor-pointer ${
-                isSelected("/collection") ? "bg-muted" : "hover:bg-muted/60"
+                isSelected("/config") ? "bg-muted" : "hover:bg-muted/60"
               } mt-2 rounded-sm`}
-              onClick={() => handleNavigation("/collection")}
+              onClick={() => handleNavigation("/config")}
             >
-              <BookmarkIcon className="text-foreground" />
-              <span>Salvos</span>
-            </div>
-            <div
-              role="button"
-              className={`py-2 px-3 flex items-center gap-3 cursor-pointer ${
-                isSelected("/persona") ? "bg-muted" : "hover:bg-muted/60"
-              } mt-2 rounded-sm`}
-              onClick={() => handleNavigation("/persona")}
-            >
-              <PersonIcon className="text-foreground" />
-              <span>Personas</span>
+              <GearIcon className="text-foreground" />
+              <span>Configurações</span>
             </div>
           </div>
           <div className="p-5">
@@ -131,21 +152,11 @@ export default function Sidebar({ rerender, isOpen, onClose }) {
             <div
               role="button"
               className={`py-2 px-3 flex items-center gap-3 cursor-pointer ${
-                isSelected("/subscription") ? "bg-muted" : "hover:bg-muted/60"
-              } mt-1 rounded-sm`}
-              onClick={() => handleNavigation("/subscription")}
-            >
-              <BackpackIcon className="text-foreground" />
-              <span>Planos e assinatura</span>
-            </div>
-            <div
-              role="button"
-              className={`py-2 px-3 flex items-center gap-3 cursor-pointer ${
                 isSelected("/account") ? "bg-muted" : "hover:bg-muted/60"
               } mt-1 rounded-sm`}
               onClick={() => handleNavigation("/account")}
             >
-              <AvatarIcon className="text-foreground" />
+              <PersonIcon className="text-foreground" />
               <span>Meu perfil</span>
             </div>
             <Button
@@ -184,11 +195,11 @@ export default function Sidebar({ rerender, isOpen, onClose }) {
             <Avatar>
               <AvatarImage src={user.photoURL} />
               <AvatarFallback className="bg-primary/50 text-white">
-                {getInitials(user.displayName)}
+                {initials}
               </AvatarFallback>
             </Avatar>
             <div>
-              <p className="font-medium">{user.displayName.split(" ")[0]}</p>
+              <p className="font-medium">{firstName}</p>
               <p className="text-sm text-muted-foreground/75">
                 Premium account
               </p>
@@ -203,40 +214,52 @@ export default function Sidebar({ rerender, isOpen, onClose }) {
               onClick={() => navigate("/")}
             >
               <DashboardIcon className="text-foreground" />
-              <span>Modelos</span>
+              <span>Visão Geral</span>
             </div>
             <div
               role="button"
               className={`py-2 px-3 flex items-center gap-3 cursor-pointer ${
-                isSelected("/history") ? "bg-muted" : "hover:bg-muted/60"
+                isSelected("/fluxos") ? "bg-muted" : "hover:bg-muted/60"
               } mt-2 rounded-sm`}
-              onClick={() => navigate("/history")}
+              onClick={() => navigate("/fluxos")}
+            >
+              <ShuffleIcon className="text-foreground" />
+              <span>Fluxos</span>
+            </div>
+            <div
+              role="button"
+              className={`py-2 px-3 flex items-center gap-3 cursor-pointer ${
+                isSelected("/automacoes") ? "bg-muted" : "hover:bg-muted/60"
+              } mt-2 rounded-sm`}
+              onClick={() => navigate("/automacoes")}
+            >
+              <MagicWandIcon className="text-foreground" />
+              <span>Automações por I.A</span>
+            </div>
+            <div
+              role="button"
+              className={`py-2 px-3 flex items-center gap-3 cursor-pointer ${
+                isSelected("/chat") ? "bg-muted" : "hover:bg-muted/60"
+              } mt-2 rounded-sm`}
+              onClick={() => navigate("/chat")}
             >
               <CounterClockwiseClockIcon className="text-foreground" />
-              <span>Histórico</span>
+              <span>Chat WhatsApp</span>
             </div>
+
             <div
               role="button"
               className={`py-2 px-3 flex items-center gap-3 cursor-pointer ${
-                isSelected("/collection") ? "bg-muted" : "hover:bg-muted/60"
+                isSelected("/config") ? "bg-muted" : "hover:bg-muted/60"
               } mt-2 rounded-sm`}
-              onClick={() => navigate("/collection")}
+              onClick={() => navigate("/config")}
             >
-              <BookmarkIcon className="text-foreground" />
-              <span>Salvos</span>
-            </div>
-            <div
-              role="button"
-              className={`py-2 px-3 flex items-center gap-3 cursor-pointer ${
-                isSelected("/persona") ? "bg-muted" : "hover:bg-muted/60"
-              } mt-2 rounded-sm`}
-              onClick={() => navigate("/persona")}
-            >
-              <PersonIcon className="text-foreground" />
-              <span>Personas</span>
+              <GearIcon className="text-foreground" />
+              <span>Configurações</span>
             </div>
           </div>
         </div>
+
         <div className="p-5">
           <Separator className="bg-border" />
         </div>
@@ -244,21 +267,11 @@ export default function Sidebar({ rerender, isOpen, onClose }) {
           <div
             role="button"
             className={`py-2 px-3 flex items-center gap-3 cursor-pointer ${
-              isSelected("/subscription") ? "bg-muted" : "hover:bg-muted/60"
-            } mt-1 rounded-sm`}
-            onClick={() => navigate("/subscription")}
-          >
-            <BackpackIcon className="text-foreground" />
-            <span>Planos e assinatura</span>
-          </div>
-          <div
-            role="button"
-            className={`py-2 px-3 flex items-center gap-3 cursor-pointer ${
               isSelected("/account") ? "bg-muted" : "hover:bg-muted/60"
             } mt-1 rounded-sm`}
             onClick={() => navigate("/account")}
           >
-            <AvatarIcon className="text-foreground" />
+            <PersonIcon className="text-foreground" />
             <span>Meu perfil</span>
           </div>
           <Button

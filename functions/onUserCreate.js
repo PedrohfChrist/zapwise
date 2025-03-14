@@ -1,4 +1,6 @@
-const functions = require("firebase-functions");
+// onUserCreate.js
+const { onDocumentCreated } = require("firebase-functions/firestore");
+const logger = require("firebase-functions/logger");
 const admin = require("firebase-admin");
 const sendEventToFacebook = require("./actions/sendEventToFacebook");
 const {
@@ -11,10 +13,16 @@ if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-exports.onUserCreate = functions.firestore
-  .document("users/{userId}")
-  .onCreate(async (snap, context) => {
+exports.onUserCreate = onDocumentCreated(
+  { document: "users/{userId}" },
+  async (event) => {
+    const snap = event.data; // Firestore doc snapshot
     const userData = snap.data();
+    if (!userData) {
+      logger.warn("Usuário sem dados, ignorando...");
+      return;
+    }
+
     userData.event_name = "Lead";
     userData.event_id = getUniqueId();
     userData.action_source = "website";
@@ -30,29 +38,35 @@ exports.onUserCreate = functions.firestore
       };
     }
 
-    const promises = [ensureContact(userData), sendEventToFacebook(userData)];
+    const [mailchimpResult, fbResult] = await Promise.allSettled([
+      ensureContact(userData),
+      sendEventToFacebook(userData),
+    ]);
 
-    const results = await Promise.allSettled(promises);
-
-    if (results[1].status === "rejected") {
-      console.error("Erro ao enviar evento para o Facebook", results[1].reason);
+    if (fbResult.status === "rejected") {
+      logger.error("Erro ao enviar evento para o Facebook", fbResult.reason);
     }
 
-    const subscriberHash = results[0].value;
+    let subscriberHash;
+    if (mailchimpResult.status === "fulfilled") {
+      subscriberHash = mailchimpResult.value;
+    } else {
+      logger.error(
+        "Erro ao criar contato no Mailchimp",
+        mailchimpResult.reason
+      );
+      return { success: false, message: "Error creating contact" };
+    }
 
     try {
+      // Remove campos sensíveis
       await snap.ref.update({
         fbc: admin.firestore.FieldValue.delete(),
         fbp: admin.firestore.FieldValue.delete(),
         user_agent: admin.firestore.FieldValue.delete(),
       });
     } catch (error) {
-      console.error("Erro ao deletar campos do usuário", error);
-    }
-
-    if (results[0].status === "rejected") {
-      console.error("Erro ao criar contato no Mailchimp", results[0].reason);
-      return { success: false, message: "Error creating contact" };
+      logger.error("Erro ao deletar campos do usuário", error);
     }
 
     await updateContactTagsOnMailchimp(subscriberHash, ["lead"]);
@@ -61,4 +75,5 @@ exports.onUserCreate = functions.firestore
       success: true,
       message: "Successfully created contact " + userData.email,
     };
-  });
+  }
+);

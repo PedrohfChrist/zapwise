@@ -1,12 +1,16 @@
 // src/utils/openaiApi.js
 import axios from "axios";
-import { doc, updateDoc, increment } from "firebase/firestore"; // Certifique-se de importar as funções necessárias
-import { db } from "@/firebase/config"; // Importar a configuração correta do Firestore
+import { doc, updateDoc, increment } from "firebase/firestore";
+import { db } from "@/firebase/config";
 
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
 const MAX_RETRIES = 5;
-const INITIAL_RETRY_DELAY = 2000; // 2 segundos
+const INITIAL_RETRY_DELAY = 2000;
 
+/**
+ * Função não utilizada atualmente no projeto.
+ * Se quiser chamá-la, basta importá-la no front ou no back.
+ */
 export const callOpenAIApi = async (
   prompt,
   userId,
@@ -26,7 +30,7 @@ export const callOpenAIApi = async (
           model: "gpt-4",
           messages: [{ role: "user", content: prompt }],
           max_tokens: maxTokens,
-          temperature: temperature,
+          temperature,
         },
         {
           headers: {
@@ -38,10 +42,10 @@ export const callOpenAIApi = async (
 
       const generatedText = response.data.choices[0].message.content;
 
-      // Contar palavras geradas
+      // Exemplo simples de contagem (palavras, não tokens):
       const wordCount = generatedText.split(" ").length;
 
-      // Atualizar palavras geradas no Firestore
+      // Atualizar contagem no Firestore (client side)
       const userRef = doc(db, "users", userId);
       await updateDoc(userRef, {
         wordsGenerated: increment(wordCount),
@@ -55,10 +59,10 @@ export const callOpenAIApi = async (
         attempt < MAX_RETRIES
       ) {
         console.warn(
-          `Attempt ${attempt} failed with status 429. Retrying after ${retryDelay}ms...`
+          `Tentativa ${attempt} falhou com 429. Retentativa em ${retryDelay}ms...`
         );
         await new Promise((resolve) => setTimeout(resolve, retryDelay));
-        retryDelay *= 2; // Aumenta o tempo de retry exponencialmente
+        retryDelay *= 2;
       } else {
         console.error("Erro ao chamar a API do OpenAI:", error);
         throw new Error("Erro ao gerar a copy. Tente novamente.");

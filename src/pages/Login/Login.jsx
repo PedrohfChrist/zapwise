@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Helmet } from "react-helmet-async"; // ✅ SEO Helmet
 import { Button } from "@/shadcn/components/ui/button";
 import { Input } from "@/shadcn/components/ui/input";
 import { Link, useNavigate } from "react-router-dom";
@@ -11,7 +12,7 @@ import GoogleLogo from "@/components/GoogleLogo";
 export default function Login() {
   const navigate = useNavigate();
   const { login, authenticateWithGoogle, isPending, error } = useLogin();
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [isEmailLogin, setIsEmailLogin] = useState(false);
@@ -20,54 +21,107 @@ export default function Login() {
     e.preventDefault();
     setIsEmailLogin(true);
     try {
-      await login(email, password);
+      await login(identifier, password);
       navigate("/");
     } catch (error) {
       console.error("Erro ao fazer login:", error);
     }
   };
 
+  // 🔹 SEO Schema Markup
+  const schemaMarkup = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    name: "Login - ZapWise",
+    description:
+      "Faça login no ZapWise e automatize suas vendas no WhatsApp com IA avançada.",
+    url: "https://app.zapwise.com.br/login",
+    potentialAction: {
+      "@type": "LoginAction",
+      target: "https://app.zapwise.com.br/login",
+    },
+  };
+
+  // 🔹 Exibir mensagem de erro amigável
   useEffect(() => {
     if (!error) return;
 
     let errorMsg = "Erro ao fazer login. Tente novamente.";
     if (error.includes("auth/invalid-login-credentials")) {
       errorMsg =
-        "As credenciais fornecidas estão incorretas ou o e-mail está vinculado ao login com Google. Clique no botão 'Entrar com a conta Google'.";
+        "As credenciais fornecidas estão incorretas ou o e-mail/número de WhatsApp está vinculado ao login com Google.";
+    } else if (error.includes("auth/user-not-found")) {
+      errorMsg =
+        "Não encontramos uma conta com este e-mail ou número de WhatsApp.";
+    } else if (error.includes("auth/wrong-password")) {
+      errorMsg = "Senha incorreta. Tente novamente.";
+    } else if (error.includes("WhatsApp number not found")) {
+      errorMsg = "Não encontramos uma conta com este número de WhatsApp.";
     }
     setErrorMsg(errorMsg);
   }, [error]);
 
   return (
-    <div className="w-full h-screen flex flex-col md:flex-row px-4 md:px-20 py-6 md:py-28 gap-10 md:gap-20">
-      <div className="w-full md:w-1/2 bg-muted rounded-xl p-8 md:p-12 flex flex-col items-center">
-        <div className="text-background p-4 md:p-8 rounded-xl leading-8">
-          <img
-            src={AiLogo}
-            alt="Login Design"
-            className="w-full max-h-48 md:max-h-72 object-contain"
-          />
+    <>
+      {/* 🔹 Helmet para SEO */}
+      <Helmet>
+        <title>Login - ZapWise</title>
+        <meta
+          name="description"
+          content="Faça login no ZapWise e automatize suas vendas no WhatsApp com IA avançada."
+        />
+        <meta
+          name="keywords"
+          content="login zapwise, whatsapp chatbot, automação de atendimento, IA para WhatsApp"
+        />
+        <meta name="author" content="ZapWise" />
+        <meta property="og:title" content="Login - ZapWise" />
+        <meta
+          property="og:description"
+          content="Entre na sua conta e comece a automatizar seu atendimento no WhatsApp com IA."
+        />
+        <meta property="og:url" content="https://app.zapwise.com.br/login" />
+        <meta property="og:type" content="website" />
+
+        <script type="application/ld+json">
+          {JSON.stringify(schemaMarkup)}
+        </script>
+      </Helmet>
+
+      <div className="w-full h-screen flex flex-col md:flex-row px-4 md:px-20 py-6 md:py-28 gap-10 md:gap-20">
+        {/* 🔹 Imagem e Apresentação */}
+        <div className="w-full md:w-1/2 bg-muted rounded-xl p-8 md:p-12 flex flex-col items-center">
+          <div className="text-background p-4 md:p-8 rounded-xl leading-8">
+            <img
+              src={AiLogo}
+              alt="Login no ZapWise"
+              className="w-full max-h-48 md:max-h-72 object-contain"
+              loading="lazy"
+            />
+          </div>
+          <div className="flex flex-col items-center mt-6">
+            <Logo />
+            <p className="text-muted-foreground font-medium mt-4 text-center text-sm md:text-md">
+              Revolucione seu atendimento no WhatsApp com ZapWise.
+            </p>
+          </div>
         </div>
-        <div className="flex flex-col items-center mt-6">
-          <Logo />
-          <p className="text-muted-foreground font-medium mt-4 text-center text-sm md:text-md">
-            Transforme palavras em vendas com a poderosa IA do CopyMax.
-          </p>
-        </div>
-      </div>
-      <div className="flex flex-col justify-center w-full md:w-1/2 px-4 md:px-20 mb-16 md:mb-0">
-        <div>
+
+        {/* 🔹 Formulário de Login */}
+        <div className="flex flex-col justify-center w-full md:w-1/2 px-4 md:px-20 mb-16 md:mb-0">
           <h1 className="text-2xl md:text-4xl font-semibold">
             Entre na sua conta
           </h1>
           <p className="mt-4 text-muted-foreground font-normal text-md md:text-lg">
             Preencha seus dados de acesso
           </p>
+
           <Button
             variant="outline"
             className="mt-6 text-lg w-full"
             disabled={isPending}
             onClick={() => authenticateWithGoogle("login")}
+            aria-label="Entrar com o Google"
           >
             {isPending && !isEmailLogin && (
               <ReloadIcon className="w-5 h-5 mr-2 animate-spin" />
@@ -77,35 +131,30 @@ export default function Login() {
               ? "Entrando..."
               : "Entrar com a conta Google"}
           </Button>
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t"></span>
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-primary-foreground px-2 text-muted-foreground">
-                Ou continue com
-              </span>
-            </div>
-          </div>
+
           <form className="mt-10" onSubmit={handleLogin}>
-            <p className="mt-5 text-muted-foreground mb-2.5 text-sm md:text-md">
-              E-mail
-            </p>
+            <label className="mt-5 text-muted-foreground mb-2.5 text-sm md:text-md">
+              E-mail ou Número do WhatsApp
+            </label>
             <Input
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value.trim().toLowerCase())}
+              type="text"
+              autoComplete="username"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value.trim())}
+              aria-label="E-mail ou Número do WhatsApp"
             />
-            <p className="mt-5 text-muted-foreground mb-2.5 text-sm md:text-md">
+
+            <label className="mt-5 text-muted-foreground mb-2.5 text-sm md:text-md">
               Senha
-            </p>
+            </label>
             <Input
               type="password"
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              aria-label="Senha"
             />
+
             <p
               className="mt-2.5 text-right text-muted-foreground underline"
               role="button"
@@ -113,6 +162,7 @@ export default function Login() {
             >
               Esqueceu sua senha?
             </p>
+
             <Button
               className="text-sm md:text-lg w-full mt-6 md:mt-10 py-4 md:py-6 text-white"
               disabled={isPending}
@@ -124,16 +174,11 @@ export default function Login() {
                 ? "Entrando..."
                 : "Entrar na minha conta"}
             </Button>
+
             {errorMsg && <p className="text-red-500 mt-2.5">{errorMsg}</p>}
           </form>
-          <div className="flex gap-2 text-sm md:text-lg mt-6 md:mt-12 justify-center mb-16 md:mb-0">
-            <p>Não tem uma conta?</p>
-            <Link to="/signup" className="text-primary">
-              Cadastre-se agora.
-            </Link>
-          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

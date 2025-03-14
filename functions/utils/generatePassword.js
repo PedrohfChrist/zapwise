@@ -1,14 +1,10 @@
-function generatePassword() {
-  const chars = "abcdefgbhijklmnopqrstuvwxyzABCDEFGHYJKLMNIPQRSWXYZ1234567890";
-  let x = 0;
-  let password = "";
-  while (x < 8) {
-    const random = Math.floor(Math.random() * (chars.length - 1));
-    password += chars[random];
-    x++;
+// generatePassword.js
+module.exports = function generatePassword(length = 8) {
+  const chars =
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let pass = "";
+  for (let i = 0; i < length; i++) {
+    pass += chars.charAt(Math.floor(Math.random() * chars.length));
   }
-
-  return password;
-}
-
-module.exports = generatePassword;
+  return pass;
+};

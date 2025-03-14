@@ -1,5 +1,15 @@
+// hooks/useLogin.js
+
 import { useState, useEffect } from "react";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  updateDoc,
+  collection,
+  query,
+  where,
+  getDocs,
+} from "firebase/firestore";
 import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
 import { auth, db, googleProvider } from "../firebase/config";
 import { useAuthContext } from "./useAuthContext";
@@ -11,11 +21,12 @@ export const useLogin = () => {
   const [error, setError] = useState(null);
   const [isPending, setIsPending] = useState(false);
   const { dispatch } = useAuthContext();
-  const query = useQuery();
+  const queryParams = useQuery();
 
   const checkUserDoc = async (uid) => {
     const userRef = doc(db, "users", uid);
     const docSnapshot = await getDoc(userRef);
+
     return docSnapshot.exists();
   };
 
@@ -46,21 +57,24 @@ export const useLogin = () => {
               fbp: getCookie("_fbp"),
               fbc: getCookie("_fbc"),
               utm: {
-                source: query.get("utm_source") || getCookie("utm_source"),
-                medium: query.get("utm_medium") || getCookie("utm_medium"),
+                source:
+                  queryParams.get("utm_source") || getCookie("utm_source"),
+                medium:
+                  queryParams.get("utm_medium") || getCookie("utm_medium"),
                 campaign:
-                  query.get("utm_campaign") || getCookie("utm_campaign"),
-                term: query.get("utm_term") || getCookie("utm_term"),
-                content: query.get("utm_content") || getCookie("utm_content"),
+                  queryParams.get("utm_campaign") || getCookie("utm_campaign"),
+                term: queryParams.get("utm_term") || getCookie("utm_term"),
+                content:
+                  queryParams.get("utm_content") || getCookie("utm_content"),
               },
-              sck: query.get("sck") || getCookie("sck"),
+              sck: queryParams.get("sck") || getCookie("sck"),
             });
             dispatch({ type: "LOGIN", payload: res.user });
             break;
           }
 
           attempts++;
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+          await new Promise((resolve) => setTimeout(resolve, 1000)); // Espera 1 segundo entre tentativas
         }
 
         if (attempts === maxAttempts) {
@@ -73,7 +87,7 @@ export const useLogin = () => {
         setError(null);
       }
     } catch (err) {
-      console.log(err.message);
+      console.error(err.message);
       if (!isCancelled) {
         setError(err.message);
         setIsPending(false);
@@ -81,14 +95,41 @@ export const useLogin = () => {
     }
   };
 
-  const login = async (email, password) => {
+  const login = async (identifier, password) => {
     setError(null);
     setIsPending(true);
 
     try {
+      let email = identifier.trim().toLowerCase();
+
+      // Verificar se o identificador é um número de WhatsApp
+      const isPhoneNumber = /^[\d+]{8,15}$/.test(email.replace(/\s+/g, ""));
+
+      if (isPhoneNumber) {
+        // Normalizar o número de telefone
+        const whatsappNumber = email.replace(/\s+/g, "").replace("+", "");
+
+        // Buscar o usuário pelo número de WhatsApp no Firestore
+        const usersRef = collection(db, "users");
+        const q = query(
+          usersRef,
+          where("whatsappNumber", "==", whatsappNumber)
+        );
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+          const userDoc = querySnapshot.docs[0];
+          email = userDoc.data().email;
+        } else {
+          throw new Error("WhatsApp number not found");
+        }
+      }
+
+      // Prosseguir com o login usando email e senha
       const res = await signInWithEmailAndPassword(auth, email, password);
 
       const userRef = doc(db, "users", res.user.uid);
+
       await updateDoc(userRef, { online: true });
 
       dispatch({ type: "LOGIN", payload: res.user });
@@ -98,8 +139,8 @@ export const useLogin = () => {
         setError(null);
       }
     } catch (err) {
+      console.error(err.message);
       if (!isCancelled) {
-        console.log(err.message);
         setError(err.message);
         setIsPending(false);
       }
@@ -108,7 +149,6 @@ export const useLogin = () => {
 
   useEffect(() => {
     return () => {
-      setIsPending(false);
       setIsCancelled(true);
     };
   }, []);

@@ -3,17 +3,17 @@ import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { initializeFirestore, serverTimestamp } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
-// Firebase config aqui embaixo
+// Firebase config
 const firebaseConfig = {
-  apiKey: "AIzaSyDioL6Cb8hMFhEtZ5tCvo4FPU4Qeb8bRf0",
-  authDomain: "adcraftor-8d13a.firebaseapp.com",
-  projectId: "adcraftor-8d13a",
-  storageBucket: "adcraftor-8d13a.appspot.com",
-  messagingSenderId: "38064844365",
-  appId: "1:38064844365:web:62e4d01614c981dd7c3604",
+  apiKey: "AIzaSyAy8DyXVX1SBBwInhtf448tYJJznBGOqsU",
+  authDomain: "whatbot-ai.firebaseapp.com",
+  projectId: "whatbot-ai",
+  storageBucket: "whatbot-ai.firebasestorage.app",
+  messagingSenderId: "723461466098",
+  appId: "1:723461466098:web:228933fd768f088855ad6b",
 };
 
-// Initialize Firebase
+// Initialize Firebase App
 const firebaseApp = initializeApp(firebaseConfig);
 
 // Initialize services
@@ -22,9 +22,8 @@ const db = initializeFirestore(firebaseApp, {
 });
 const auth = getAuth(firebaseApp);
 const storage = getStorage(firebaseApp);
-const googleProvider = new GoogleAuthProvider(); // Inicializando o GoogleAuthProvider
-
-// Timestamp
+const googleProvider = new GoogleAuthProvider();
 const timestamp = serverTimestamp();
 
-export { db, auth, storage, timestamp, googleProvider };
+// Exporta também a instância do Firebase App como "app"
+export { firebaseApp as app, db, auth, storage, timestamp, googleProvider };

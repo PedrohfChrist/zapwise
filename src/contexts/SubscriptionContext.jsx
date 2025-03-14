@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useDocument } from "@/hooks/useDocument";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "@/firebase/config";
 import { differenceInDays } from "date-fns";
 
 export const SubscriptionContext = createContext();
@@ -15,54 +17,80 @@ export const useSubscriptionContext = () => {
 };
 
 export function SubscriptionProvider({ children, user }) {
-  const { document: subscriptionDoc } = useDocument("subscriptions", user.uid);
+  const { document: subscriptionDoc } = useDocument("subscriptions", user?.uid);
 
   const [subscriptionStatus, setSubscriptionStatus] = useState({
-    isAdmin: false,
-    isFreeTrial: false,
-    isPaid: false,
-    daysLeft: 0,
+    status: "LOADING",
+    plan: "",
+    renewalDate: null,
     wordsGenerated: 0,
-    planLimit: 0,
+    planLimit: 100000, // Mensal ou Anual => ambos 100k
+    isExpired: false,
+    daysLeft: 0,
   });
 
+  const [notificationSent, setNotificationSent] = useState(false);
+
   useEffect(() => {
-    if (user.uid === "Y05s3draE8NnHgOLPlUbqLeOdlH2") {
-      // Se for a conta de administrador, definir acesso total
-      setSubscriptionStatus({
-        isAdmin: true,
-        isPaid: true,
-        daysLeft: Infinity,
-        wordsGenerated: 0,
-        planLimit: Infinity,
-      });
-    } else if (subscriptionDoc) {
-      const { status, plan, renewalDate, wordsGenerated } = subscriptionDoc;
+    if (!subscriptionDoc) return;
 
-      const today = new Date();
-      const renewal = renewalDate.toDate();
-      const isPaid = status === "ACTIVE";
+    const { status, plan, renewalDate, wordsGenerated = 0 } = subscriptionDoc;
 
-      const planLimit =
-        plan === "Plano Starter"
-          ? 20000
-          : plan === "Plano Premium"
-          ? 100000
-          : plan === "Plano Pro"
-          ? 300000
-          : 0;
+    let planLimit = 100000; // p/ ambos
 
-      const daysLeft = differenceInDays(renewal, today);
-
-      setSubscriptionStatus({
-        isAdmin: false,
-        isPaid,
-        daysLeft: daysLeft > 0 ? daysLeft : 0,
-        wordsGenerated: wordsGenerated || 0,
-        planLimit,
-      });
+    let renewalDt;
+    if (renewalDate?.toDate) {
+      renewalDt = renewalDate.toDate();
+    } else {
+      renewalDt = renewalDate ? new Date(renewalDate) : null;
     }
-  }, [subscriptionDoc, user.uid]);
+
+    const now = new Date();
+    let isExpired = false;
+    let daysLeft = 0;
+
+    if (status !== "ACTIVE" || !renewalDt || renewalDt < now) {
+      isExpired = true;
+    }
+    if (renewalDt) {
+      const diff = differenceInDays(renewalDt, now);
+      daysLeft = diff > 0 ? diff : 0;
+    }
+
+    setSubscriptionStatus({
+      status,
+      plan,
+      renewalDate: renewalDt,
+      wordsGenerated,
+      planLimit,
+      isExpired,
+      daysLeft,
+    });
+  }, [subscriptionDoc]);
+
+  // Se expirada => criar notificação 1x
+  useEffect(() => {
+    if (!user?.uid) return;
+    if (subscriptionStatus.status === "LOADING") return;
+
+    if (subscriptionStatus.isExpired && !notificationSent) {
+      createExpirationNotification(user.uid);
+      setNotificationSent(true);
+    }
+  }, [subscriptionStatus, user?.uid, notificationSent]);
+
+  const createExpirationNotification = async (uid) => {
+    try {
+      await addDoc(collection(db, "notifications"), {
+        userId: uid,
+        message: "Sua assinatura está expirada. Clique aqui para renovar.",
+        read: false,
+        createdAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error("Erro ao criar notificação:", error);
+    }
+  };
 
   return (
     <SubscriptionContext.Provider value={{ subscriptionStatus }}>

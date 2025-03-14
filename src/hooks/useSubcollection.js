@@ -1,42 +1,65 @@
-import { useState, useEffect } from "react";
-import { collection, query, onSnapshot } from "firebase/firestore";
+import { useEffect, useState, useRef } from "react";
+import {
+  query,
+  onSnapshot,
+  where,
+  orderBy,
+  limit,
+  collection,
+} from "firebase/firestore";
 import { db } from "../firebase/config";
-import { useFirestore } from "./useFirestore";
 
-export const useSubcollection = (coll, id, subcoll) => {
-  const [documents, setDocuments] = useState([]);
+export const useSubcollection = (
+  coll,
+  docId,
+  subcoll,
+  _query,
+  _orderBy,
+  _limit
+) => {
+  const [documents, setDocuments] = useState(null);
   const [error, setError] = useState(null);
-  const { addDocument: logError } = useFirestore("errors");
+
+  const q = useRef(_query).current;
+  const ob = useRef(_orderBy).current;
 
   useEffect(() => {
-    if (!coll || !id || !subcoll) return;
+    // Create a reference to the subcollection
+    let ref = collection(db, `${coll}/${docId}/${subcoll}`);
 
-    const q = query(collection(db, `${coll}/${id}/${subcoll}`));
+    if (q) {
+      ref = query(ref, where(...q));
+    }
+
+    if (ob) {
+      ref = query(ref, orderBy(...ob));
+    }
+
+    if (_limit) {
+      ref = query(ref, limit(_limit));
+    }
 
     const unsub = onSnapshot(
-      q,
-      (querySnapshot) => {
-        let results = [];
-        querySnapshot.forEach((doc) => {
+      ref,
+      (snapshot) => {
+        const results = [];
+        snapshot.forEach((doc) => {
           results.push({ ...doc.data(), id: doc.id });
         });
+
         setDocuments(results);
         setError(null);
       },
-      (err) => {
-        setError(err.message);
-        console.log(err.message);
-        logError({
-          error: err.message,
-          documentId: id,
-          collection: coll,
-          where: "useSubcollection",
-        });
+      (error) => {
+        console.log("Erro na subcoleção ", subcoll);
+        console.log(error);
+        setError("Could not fetch the documents.");
       }
     );
 
+    // Cleanup
     return () => unsub();
-  }, [coll, id, subcoll]);
+  }, [coll, docId, subcoll, q, ob, _limit]);
 
   return { documents, error };
 };

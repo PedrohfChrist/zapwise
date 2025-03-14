@@ -1,245 +1,256 @@
+"use client";
+
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import WarningBar from "@/components/WarningBar";
 import {
-  ChatBubbleIcon,
-  CheckCircledIcon,
-  ClipboardIcon,
-  EnvelopeClosedIcon,
-  HeartIcon,
-  LayersIcon,
-  Pencil1Icon,
-  RocketIcon,
-  TextAlignJustifyIcon,
-  VideoIcon,
-  HeadingIcon,
-  GearIcon,
-} from "@radix-ui/react-icons";
-import { useSubscriptionContext } from "@/hooks/useSubscriptionContext";
+  collection,
+  query,
+  where,
+  orderBy,
+  onSnapshot,
+} from "firebase/firestore";
+import { db } from "@/firebase/config";
 
-const models = {
-  anúncios: [
-    {
-      title: "Facebook Ads | Título",
-      description:
-        "Gerador de títulos para anúncio de Facebook Ads. Títulos persuasivos para chamar atenção e atrair o usuário.",
-      icon: <HeadingIcon />,
-      badgeColor: "bg-cyan-300",
-      route: "/create/fb-ads-title",
-    },
-    {
-      title: "Facebook Ads | Texto",
-      description:
-        "Gerador de textos para anúncio de Facebook Ads. Este gerador cria textos com storytelling, o que produz um altíssimo CTR em seu anúncio.",
-      icon: <TextAlignJustifyIcon />,
-      badgeColor: "bg-cyan-300",
-      route: "/create/fb-ads-text",
-    },
-    {
-      title: "Vídeo Ads | Roteiro 1-2 min",
-      description:
-        "Crie um vídeo de anúncio com 1 a 2 minutos. Para: Facebook Ads.",
-      icon: <VideoIcon />,
-      badgeColor: "bg-cyan-300",
-      route: "/create/video-ads",
-    },
-  ],
-  páginas: [
-    {
-      title: "Página de Vendas",
-      description:
-        "Crie uma página de vendas completa para vender o seu produto. Respoda as perguntas de maneira clara, precisa e única e o resultado será incrível!",
-      icon: <RocketIcon />,
-      badgeColor: "bg-green-300",
-      route: "/create/pagina-vendas",
-    },
-    {
-      title: "Página de Captura",
-      description:
-        "Crie uma página que atrai e converte visitantes em leads valiosos.",
-      icon: <ClipboardIcon />,
-      badgeColor: "bg-green-300",
-      route: "/create/pagina-captura",
-    },
-    {
-      title: "Página de Agradecimentos",
-      description:
-        "Crie páginas para agradecer e engajar clientes após uma ação (compra ou cadastro).",
-      icon: <HeartIcon />,
-      badgeColor: "bg-green-300",
-      route: "/create/pagina-agradecimento",
-    },
-    {
-      title: "Depoimentos",
-      description:
-        "Gere depoimentos para credibilizar seu produto em sua página.",
-      icon: <ChatBubbleIcon />,
-      badgeColor: "bg-green-300",
-      route: "/create/depoimentos",
-    },
-  ],
-  VSL: [
-    {
-      title: "Roteiro VSL",
-      description:
-        "Gere um roteiro VSL completo, de 4 a 6 minutos para converter leads e vender um produto.",
-      icon: <VideoIcon />,
-      badgeColor: "bg-red-300",
-      route: "/create/roteiro-vsl",
-    },
-    {
-      title: "Roteiro VSL Upsell",
-      description:
-        "Crie um roteiro poderoso para VSL de Upsell. Aumente seu ticket médio e maximize seus lucros.",
-      icon: <VideoIcon />,
-      badgeColor: "bg-red-300",
-      route: "/create/roteiro-vsl-upsell",
-    },
-  ],
-  "e-mail": [
-    {
-      title: "E-mail Carrinho Abandonado",
-      description:
-        "Gere um e-mail para converter leads que abandonaram o carrinho e ainda não finalizaram a compra.",
-      icon: <EnvelopeClosedIcon />,
-      badgeColor: "bg-yellow-200",
-      route: "/create/email-carrinho-abandonado",
-    },
-    {
-      title: "E-mail Boleto Gerado",
-      description:
-        "Converta boletos gerados que ainda não foram pagos. Pode ser usado no Whatsapp também.",
-      icon: <EnvelopeClosedIcon />,
-      badgeColor: "bg-yellow-200",
-      route: "/create/email-boleto",
-    },
-  ],
-  Oferta: [
-    {
-      title: "Nome do Produto",
-      description:
-        "Crie um nome cativante e memorável para seu produto ou serviço que ressoe com seu público-alvo.",
-      icon: <Pencil1Icon />,
-      badgeColor: "bg-purple-300",
-      route: "/create/oferta-nome",
-    },
-    {
-      title: "Nicho e Subnicho",
-      description:
-        "Defina o nicho e o subnicho para o qual sua oferta é direcionada. Isso ajuda a segmentar e atrair o público certo.",
-      icon: <LayersIcon />,
-      badgeColor: "bg-purple-300",
-      route: "/create/oferta-nicho",
-    },
-    {
-      title: "Mecanismo Único",
-      description:
-        "Descreva o mecanismo único que diferencia sua oferta das demais. Explique como seu produto ou serviço resolve os problemas do seu publico de uma maneira exclusiva.",
-      icon: <GearIcon />,
-      badgeColor: "bg-purple-300",
-      route: "/create/oferta-mecanismo",
-    },
-    {
-      title: "Promessa Principal",
-      description:
-        "Crie a promessa principal da sua oferta. Esta é a promessa central que seu produto ou serviço entrega ao cliente.",
-      icon: <CheckCircledIcon />,
-      badgeColor: "bg-purple-300",
-      route: "/create/oferta-promessa",
-    },
-  ],
-};
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
-const filterLabels = {
-  todos: "Todos",
-  anúncios: "Anúncios",
-  páginas: "Páginas",
-  VSL: "VSL",
-  "e-mail": "E-mail",
-  Oferta: "Oferta",
-};
+import { format, startOfDay, subDays } from "date-fns";
+// date-fns para formatar datas
+
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
+import { PlusIcon, MagicWandIcon, ShuffleIcon } from "@radix-ui/react-icons";
+import { useAuthContext } from "@/hooks/useAuthContext";
+import NotificationBell from "@/components/NotificationBell";
 
 export default function Home() {
-  const [filter, setFilter] = useState("todos");
-  const navigate = useNavigate();
-  const { subscriptionDoc, subscriptionStatus } = useSubscriptionContext();
+  const { user } = useAuthContext();
+
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-100">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-700">Acesso Negado</h2>
+          <p className="text-gray-500">Faça login para acessar o painel.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const userId = user.uid;
+
+  // Placeholder até implementar fluxos:
+  const [fluxosCount] = useState("-");
+
+  // Métricas principais (ativas, leads)
+  const [activeAutomationsCount, setActiveAutomationsCount] = useState(0);
+  const [totalLeadsCount, setTotalLeadsCount] = useState(0);
+
+  // Dados dos gráficos
+  // "atendimentos" => mensagens role="user"
+  // "messages" => mensagens role="user" + "assistant"
+  const [atendimentosData, setAtendimentosData] = useState([]);
+  const [messagesData, setMessagesData] = useState([]);
+
+  // ─────────────────────────────────────────────
+  // 1) Buscar automações ativas e leads
+  // ─────────────────────────────────────────────
+  useEffect(() => {
+    const unsubAutomacoes = onSnapshot(
+      query(
+        collection(db, "automacoes"),
+        where("userId", "==", userId),
+        where("ativa", "==", true)
+      ),
+      (snap) => setActiveAutomationsCount(snap.size)
+    );
+
+    const unsubLeads = onSnapshot(
+      query(collection(db, "leads"), where("userId", "==", userId)),
+      (snap) => setTotalLeadsCount(snap.size)
+    );
+
+    return () => {
+      unsubAutomacoes();
+      unsubLeads();
+    };
+  }, [userId]);
+
+  // ─────────────────────────────────────────────
+  // 2) Buscar do Firestore: messageHistory
+  //    - role="user" => atendimentos
+  //    - role in ("user","assistant") => total
+  // ─────────────────────────────────────────────
 
   useEffect(() => {
-    console.log(subscriptionDoc); // Para debug
-  }, [subscriptionDoc]);
+    // role="user"
+    const unsubAtendimentos = onSnapshot(
+      query(
+        collection(db, "messageHistory"),
+        where("userId", "==", userId),
+        where("role", "==", "user"),
+        orderBy("timestamp", "desc")
+      ),
+      (snap) => {
+        // each doc => {role, content, timestamp, userId,...}
+        const msgs = snap.docs.map((docSnap) => {
+          const d = docSnap.data();
+          return {
+            ...d,
+            timestamp: d.timestamp?.toDate ? d.timestamp.toDate() : d.timestamp,
+          };
+        });
+        setAtendimentosData(convertDocsToDailyData(msgs));
+      }
+    );
 
-  const handleFilterClick = (filter) => {
-    setFilter(filter);
-  };
+    // role in ("user","assistant") => na prática, se a doc
+    // pode ter outras roles, mas normalmente é user ou assistant
+    const unsubMessages = onSnapshot(
+      query(
+        collection(db, "messageHistory"),
+        where("userId", "==", userId),
+        orderBy("timestamp", "desc")
+      ),
+      (snap) => {
+        const msgs = snap.docs.map((docSnap) => {
+          const d = docSnap.data();
+          return {
+            ...d,
+            timestamp: d.timestamp?.toDate ? d.timestamp.toDate() : d.timestamp,
+          };
+        });
+        setMessagesData(convertDocsToDailyData(msgs));
+      }
+    );
 
-  const handleCardClick = (route) => {
-    navigate(route);
-  };
+    return () => {
+      unsubAtendimentos();
+      unsubMessages();
+    };
+  }, [userId]);
 
-  const filteredModels =
-    filter === "todos" ? Object.values(models).flat() : models[filter];
+  // ─────────────────────────────────────────────
+  // 3) Converter docs em dados diários
+  // ─────────────────────────────────────────────
+  function convertDocsToDailyData(msgs) {
+    // msgs => array {timestamp, ...}
+    // vamos agrupar por dia e contar
+
+    const dayCounts = {};
+    msgs.forEach((m) => {
+      if (!m.timestamp) return;
+      const day = startOfDay(m.timestamp);
+      const dayStr = format(day, "dd/MM");
+      if (!dayCounts[dayStr]) {
+        dayCounts[dayStr] = 0;
+      }
+      dayCounts[dayStr]++;
+    });
+
+    // últimos 7 dias
+    const result = [];
+    for (let i = 6; i >= 0; i--) {
+      const dayObj = subDays(new Date(), i);
+      const dayStr = format(dayObj, "dd/MM");
+      const value = dayCounts[dayStr] || 0;
+      result.push({ name: dayStr, value });
+    }
+    return result;
+  }
 
   return (
-    <main className="p-5 w-full overflow-y-auto">
-      <WarningBar />
-      <div className="mt-28">
-        <h1 className="text-2xl font-semibold mb-8 sm:text-left text-center">
-          Modelos
-        </h1>
-        <div className="flex sm:justify-start justify-center flex-wrap mb-6">
-          {Object.keys(filterLabels).map((item) => (
-            <button
-              key={item}
-              onClick={() => handleFilterClick(item)}
-              className={`px-2 py-1 m-1 rounded-md border hover:bg-input ${
-                filter === item
-                  ? "bg-input text-primary font-semibold border-primary/20"
-                  : "bg-background text-foreground"
-              }`}
-            >
-              {filterLabels[item]}
-            </button>
-          ))}
+    <main className="p-6 w-full bg-gray-100 min-h-screen">
+      {/* Botões de Ações */}
+      <div className="mt-4 flex justify-between items-center">
+        <div className="flex gap-4">
+          <Link to="/fluxos">
+            <Button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white">
+              <PlusIcon /> Criar Fluxo <ShuffleIcon />
+            </Button>
+          </Link>
+          <Link to="/automacoes">
+            <Button className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white">
+              <PlusIcon /> Criar Automação <MagicWandIcon />
+            </Button>
+          </Link>
         </div>
+        <NotificationBell userId={user.uid} />
+      </div>
 
-        {Object.keys(models).map((category) => (
-          <div
-            key={category}
-            className={`${
-              filter !== "todos" && filter !== category ? "hidden" : ""
-            }`}
-          >
-            <h1 className="text-xl font-semibold mb-6 mt-10">
-              {filterLabels[category]}
-            </h1>
-            <div
-              className="grid gap-6 mb-10"
-              style={{
-                gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-              }}
-            >
-              {models[category].map((model, index) => (
-                <div
-                  key={index}
-                  onClick={() => handleCardClick(model.route)}
-                  className="border p-4 rounded-xl bg-card min-h-[200px] relative cursor-pointer transform transition-shadow duration-200 hover:shadow-[0_0_5px_rgba(0,0,0,0.15)]"
-                >
-                  <div
-                    className={`absolute p-1.5 rounded-md ${model.badgeColor}`}
-                  >
-                    <span className="text-sm text-[#010816]">{model.icon}</span>
-                  </div>
-                  <h3 className="pt-4 text-md font-medium mt-8">
-                    {model.title}
-                  </h3>
-                  <p className="text-foreground/50 mt-2 text-sm">
-                    {model.description}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
+      {/* Cards Estatísticas */}
+      <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-6">
+        {[
+          { title: "Fluxos", value: fluxosCount },
+          {
+            title: "Automações por I.A (Ativas)",
+            value: activeAutomationsCount,
+          },
+          { title: "Total de Leads", value: totalLeadsCount },
+        ].map((item, idx) => (
+          <Card key={idx} className="shadow-lg bg-white rounded-lg p-6">
+            <CardHeader className="text-center">
+              <CardTitle className="text-gray-500 text-sm font-medium">
+                {item.title}
+              </CardTitle>
+              <h2 className="text-3xl font-bold text-gray-900">{item.value}</h2>
+            </CardHeader>
+          </Card>
         ))}
+      </div>
+
+      {/* Gráficos */}
+      <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 gap-6">
+        {/* Gráfico de atendimentos (role="user") */}
+        <Card className="shadow-lg bg-white rounded-lg p-6">
+          <CardHeader className="flex justify-between items-center">
+            <CardTitle>Atendimentos Realizados</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={atendimentosData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                {/* Forçar o eixo Y de 0 até dataMax+1, para não ficar “achatado” */}
+                <YAxis domain={[0, "dataMax + 1"]} />
+                <Tooltip />
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#3b82f6"
+                  strokeWidth={2}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Gráfico de mensagens totais (role="user" + "assistant") */}
+        <Card className="shadow-lg bg-white rounded-lg p-6">
+          <CardHeader className="flex justify-between items-center">
+            <CardTitle>Mensagens Trocadas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={messagesData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis domain={[0, "dataMax + 1"]} />
+                <Tooltip />
+                <Bar dataKey="value" fill="#10b981" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
       </div>
     </main>
   );

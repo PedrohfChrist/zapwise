@@ -1,50 +1,65 @@
-const functions = require("firebase-functions");
+// initiateCheckout.js
+const { onRequest } = require("firebase-functions/http");
+const logger = require("firebase-functions/logger");
+const express = require("express");
+const cors = require("cors");
 const sendEventToFacebook = require("./actions/sendEventToFacebook");
 const {
   ensureContact,
   updateContactTagsOnMailchimp,
 } = require("./actions/sendEventToMailchimp");
-const cors = require("cors")({ origin: true });
 
-exports.initiateCheckout = functions.https.onRequest((req, res) => {
-  // Wrap the entire function logic in cors middleware
-  cors(req, res, async () => {
-    // get ip address from the request
+const app = express();
+app.use(cors({ origin: true }));
+app.use(express.json());
+
+app.post("/", async (req, res) => {
+  try {
     const ipAddress =
       req.headers["x-forwarded-for"] || req.socket.remoteAddress;
 
-    const promises = [
+    const [mailchimpResult, fbResult] = await Promise.allSettled([
       ensureContact(req.body),
       sendEventToFacebook(req.body, ipAddress),
-    ];
+    ]);
 
-    const results = await Promise.allSettled(promises);
-    const subscriberHash = results[0].value;
-
-    if (results[1].status === "rejected") {
-      console.error("Erro ao enviar evento para o Facebook", results[1].reason);
+    let subscriberHash;
+    if (mailchimpResult.status === "fulfilled") {
+      subscriberHash = mailchimpResult.value;
+    } else {
+      logger.error(
+        "Erro ao criar contato no Mailchimp",
+        mailchimpResult.reason
+      );
     }
 
-    if (results[0].status === "rejected") {
-      console.error("Erro ao criar contato no Mailchimp", results[0].reason);
-      return res.status(500).json({
-        success: false,
-        message: "Error creating contact",
-      });
+    if (fbResult.status === "rejected") {
+      logger.error("Erro ao enviar evento ao Facebook", fbResult.reason);
     }
 
-    try {
-      await updateContactTagsOnMailchimp(subscriberHash, [
-        { name: "lead", status: "active" },
-        { name: "initiate checkout", status: "active" },
-      ]);
-    } catch (error) {
-      console.error("Erro ao atualizar tags no Mailchimp", error);
+    // Atualiza tags
+    if (subscriberHash) {
+      try {
+        await updateContactTagsOnMailchimp(subscriberHash, [
+          { name: "lead", status: "active" },
+          { name: "initiate checkout", status: "active" },
+        ]);
+      } catch (error) {
+        logger.error("Erro ao atualizar tags no Mailchimp", error);
+      }
     }
 
-    res.status(200).send({
+    return res.status(200).json({
       success: true,
       message: "Successfully created contact and sent event to Facebook",
     });
-  });
+  } catch (error) {
+    logger.error("Error in initiateCheckout:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error in initiateCheckout",
+    });
+  }
 });
+
+exports.initiateCheckout = onRequest(app);

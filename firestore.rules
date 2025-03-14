@@ -1,8 +1,109 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // 1) Bloqueio Global: quem não está logado não acessa
     match /{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if false;
+    }
+
+    // 2) users
+    match /users/{userId} {
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // 3) subscriptions
+    match /subscriptions/{userId} {
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // 4) automacoes
+    // => Somente se subscription ativa
+    match /automacoes/{autoId} {
+      // CREATE
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && get(/databases/$(database)/documents/subscriptions/$(request.auth.uid)).data.status == "ACTIVE";
+
+      // READ
+      allow read: if request.auth != null
+                  && resource.data.userId == request.auth.uid;
+
+      // UPDATE, DELETE
+      allow update, delete: if request.auth != null
+                            && resource.data.userId == request.auth.uid
+                            && get(/databases/$(database)/documents/subscriptions/$(request.auth.uid)).data.status == "ACTIVE";
+    }
+
+    // 5) leads
+    match /leads/{leadId} {
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid;
+
+      allow read, update, delete: if request.auth != null
+                                  && resource.data.userId == request.auth.uid;
+    }
+
+    // 6) messageHistory
+    match /messageHistory/{msgId} {
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid;
+
+      allow read, update, delete: if request.auth != null
+                                  && resource.data.userId == request.auth.uid;
+    }
+
+    // 7) userTwilio
+    match /userTwilio/{twilioId} {
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid;
+
+      allow read, update, delete: if request.auth != null
+                                  && resource.data.userId == request.auth.uid;
+    }
+
+    // 8) userWhatsApp
+    match /userWhatsApp/{whatsAppId} {
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid;
+
+      allow read, update, delete: if request.auth != null
+                                  && resource.data.userId == request.auth.uid;
+    }
+
+    // 9) userFcmTokens
+    match /userFcmTokens/{tokenId} {
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid;
+
+      allow read, update, delete: if request.auth != null
+                                  && resource.data.userId == request.auth.uid;
+    }
+
+    // 10) notifications
+    match /notifications/{notifId} {
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid;
+
+      allow read, update, delete: if request.auth != null
+                                  && resource.data.userId == request.auth.uid;
+    }
+
+    // 11) webhooks (se tiver)
+    match /webhooks/{webhookId} {
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid;
+
+      allow read, update, delete: if request.auth != null
+                                  && resource.data.userId == request.auth.uid;
+    }
+
+    // 12) Admin fallback
+    match /{collection}/{docId} {
+      allow read, write, delete: if request.auth != null
+                                 && request.auth.token.admin == true;
     }
   }
 }

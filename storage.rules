@@ -1,17 +1,45 @@
 rules_version = '2';
-
 service firebase.storage {
   match /b/{bucket}/o {
-    // Permitir leitura para qualquer pessoa
-    match /public/{allPaths=**} {
-      allow read: if true;
-    }
     
-    // Permitir leitura e escrita apenas para usuários autenticados
-    match /users/{userId}/{allPaths=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    // 🛑 Bloqueia acesso de usuários não autenticados
+    match /{allPaths=**} {
+      allow read, write: if false;
     }
-    
-    // Você pode adicionar mais regras específicas conforme necessário
+
+    // ✅ Pasta "users" - Armazena arquivos de perfil, avatares, etc.
+    match /users/{userId}/{fileName} {
+      allow read, write, delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ✅ Pasta "automacoes" - Armazena arquivos relacionados às automações dos usuários
+    match /automacoes/{userId}/{fileName} {
+      allow read, write, delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ✅ Pasta "leads" - Armazena arquivos relacionados a leads (ex: logs, históricos, anexos)
+    match /leads/{userId}/{fileName} {
+      allow read, write, delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ✅ Pasta "twilio" - Armazena arquivos da integração com Twilio
+    match /twilio/{userId}/{fileName} {
+      allow read, write, delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ✅ Pasta "whatsapp" - Armazena arquivos enviados/recebidos pelo WhatsApp
+    match /whatsapp/{userId}/{fileName} {
+      allow read, write, delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ✅ Pasta "notifications" - Armazena imagens ou conteúdos de notificações push
+    match /notifications/{userId}/{fileName} {
+      allow read, write, delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // 🏆 **Admins podem acessar tudo**
+    match /{allPaths=**} {
+      allow read, write, delete: if request.auth != null && request.auth.token.admin == true;
+    }
   }
 }

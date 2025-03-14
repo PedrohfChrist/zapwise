@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "adcraftor-8d13a"
-  }
+    "app": "whatbot-ai"
+  },
+  "targets": {},
+  "etags": {}
 }

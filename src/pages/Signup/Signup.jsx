@@ -1,3 +1,5 @@
+// components/Signup.js
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/shadcn/components/ui/button";
 import { Input } from "@/shadcn/components/ui/input";
@@ -12,10 +14,12 @@ import {
   validatePassword,
   validateEmail,
   validateFullName,
+  validatePhoneNumber,
 } from "@/utils/validate";
 
 export default function Signup() {
   const [fullName, setFullName] = useState("");
+  const [whatsappNumber, setWhatsappNumber] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [emailTypo, setEmailTypo] = useState("");
@@ -55,19 +59,26 @@ export default function Signup() {
     e.preventDefault();
 
     const { isValidFullName, message: nameMsg } = validateFullName(fullName);
+    const { isValidPhoneNumber, message: phoneMsg } =
+      validatePhoneNumber(whatsappNumber);
     const { isValidEmail, message: emailMsg } = validateEmail(email);
     const { isValidPassword, message: passMsg } = validatePassword(password);
 
-    if (!isValidFullName || !isValidEmail || !isValidPassword) {
+    if (
+      !isValidFullName ||
+      !isValidEmail ||
+      !isValidPassword ||
+      !isValidPhoneNumber
+    ) {
       setMessage({
         type: "error",
-        message: nameMsg || emailMsg || passMsg,
+        message: nameMsg || emailMsg || passMsg || phoneMsg,
       });
       return;
     }
 
     try {
-      await signup(email, password, fullName);
+      await signup(email, password, whatsappNumber, fullName);
       navigate("/");
     } catch (error) {
       console.error("Erro ao criar a conta:", error);
@@ -83,6 +94,8 @@ export default function Signup() {
         errorMsg = "A senha informada é muito fraca.";
       } else if (error.includes("invalid-email")) {
         errorMsg = "O e-mail informado é inválido.";
+      } else if (error.includes("WhatsApp number already in use")) {
+        errorMsg = "O número de WhatsApp já está em uso.";
       }
       setMessage({ type: "error", message: errorMsg });
     }
@@ -101,7 +114,8 @@ export default function Signup() {
         <div className="flex flex-col items-center mt-6">
           <Logo />
           <p className="text-muted-foreground font-medium mt-4 text-center text-sm md:text-md">
-            Domine o poder do copywriting de alta conversão!
+            Automatize seu atendimento no WhatsApp com a I.A humanizada e
+            autônoma do ZapWise.
           </p>
         </div>
       </div>
@@ -143,14 +157,16 @@ export default function Signup() {
               type="text"
               autoComplete="name"
               value={fullName}
-              onChange={(e) => {
-                const value = e.target.value;
-                const regex = /^[A-Za-z\s]+$/;
-
-                if (value === "" || regex.test(value)) {
-                  setFullName(value);
-                }
-              }}
+              onChange={(e) => setFullName(e.target.value)}
+            />
+            <p className="mt-4 md:mt-5 text-muted-foreground mb-2 text-sm md:text-md">
+              Número do WhatsApp
+            </p>
+            <Input
+              type="tel"
+              autoComplete="tel"
+              value={whatsappNumber}
+              onChange={(e) => setWhatsappNumber(e.target.value.trim())}
             />
             <p className="mt-4 md:mt-5 text-muted-foreground mb-2 text-sm md:text-md">
               E-mail
@@ -161,13 +177,8 @@ export default function Signup() {
               value={email}
               onChange={(e) => {
                 const value = e.target.value.trim().toLowerCase();
-                const regex = /^[a-zA-Z0-9._%+-@]+$/;
-
-                if (value === "" || regex.test(value)) {
-                  setEmail(value);
-                }
-
-                checkEmailTypos(e.target.value);
+                setEmail(value);
+                checkEmailTypos(value);
               }}
             />
             {emailTypo && (

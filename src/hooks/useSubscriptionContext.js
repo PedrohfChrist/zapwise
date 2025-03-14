@@ -4,9 +4,10 @@ import { SubscriptionContext } from "@/contexts/SubscriptionContext";
 export const useSubscriptionContext = () => {
   const context = useContext(SubscriptionContext);
   if (!context) {
-    throw new Error(
-      "useSubscriptionContext must be used within a SubscriptionProvider."
+    throw Error(
+      "useSubscriptionContext must be inside an SubscriptionProvider."
     );
   }
+
   return context;
 };

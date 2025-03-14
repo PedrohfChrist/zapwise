@@ -1,4 +1,4 @@
-import React, { useReducer, useEffect, useState } from "react";
+import { useReducer, useEffect, useState } from "react";
 import {
   collection,
   addDoc,
@@ -6,13 +6,13 @@ import {
   updateDoc,
   doc,
   setDoc,
+  serverTimestamp,
+  getDocs,
+  getDoc,
   query,
   where,
-  onSnapshot,
-  serverTimestamp,
 } from "firebase/firestore";
 import { db, timestamp } from "../firebase/config";
-import { useAuthContext } from "@/hooks/useAuthContext"; // Hook para pegar o usuário logado
 
 const initialState = {
   document: null,
@@ -73,8 +73,6 @@ const firestoreReducer = (state, action) => {
 export const useFirestore = (coll) => {
   const [response, dispatch] = useReducer(firestoreReducer, initialState);
   const [isCancelled, setIsCancelled] = useState(false);
-  const [documents, setDocuments] = useState([]);
-  const { user } = useAuthContext(); // Pegar usuário logado
 
   // Collection ref
   const ref = collection(db, coll);
@@ -86,33 +84,12 @@ export const useFirestore = (coll) => {
     }
   };
 
-  // Fetch documents for the current user
-  useEffect(() => {
-    if (!user) return;
-
-    const q = query(ref, where("userId", "==", user.uid));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const results = [];
-      snapshot.docs.forEach((doc) => {
-        results.push({ ...doc.data(), id: doc.id });
-      });
-      setDocuments(results);
-    });
-
-    return () => unsubscribe();
-  }, [ref, user]);
-
   // Add a document
-  const addDocument = async (docData) => {
+  const addDocument = async (doc) => {
     dispatch({ type: "IS_PENDING" });
     try {
       const createdAt = timestamp;
-      const userId = user.uid; // Pegar userId
-      const addedDocument = await addDoc(ref, {
-        ...docData,
-        createdAt,
-        userId,
-      });
+      const addedDocument = await addDoc(ref, { ...doc, createdAt });
       dispatchIfNotCancelled({
         type: "ADDED_DOCUMENT",
         payload: addedDocument,
@@ -128,12 +105,10 @@ export const useFirestore = (coll) => {
   const createDocument = async (id, data) => {
     try {
       const createdAt = timestamp;
-      const userId = user.uid; // Pegar userId
 
       const documentSet = await setDoc(doc(db, coll, id), {
         ...data,
         createdAt,
-        userId,
       });
 
       dispatchIfNotCancelled({
@@ -183,6 +158,111 @@ export const useFirestore = (coll) => {
     }
   };
 
+  const addSubDocument = async (docId, subcoll, data) => {
+    dispatch({ type: "IS_PENDING" });
+    try {
+      const createdAt = timestamp;
+      const subcollRef = collection(db, `${coll}/${docId}/${subcoll}`);
+      const addedSubDocument = await addDoc(subcollRef, { ...data, createdAt });
+      dispatchIfNotCancelled({
+        type: "ADDED_DOCUMENT",
+        payload: addedSubDocument,
+      });
+      return { type: "SUCCESS", payload: addedSubDocument.id };
+    } catch (err) {
+      dispatchIfNotCancelled({ type: "ERROR", payload: err.message });
+      return { type: "ERROR", payload: err.message };
+    }
+  };
+
+  // Remove a subdocument
+  const deleteSubDocument = async (docId, subcoll, subDocId) => {
+    dispatch({ type: "IS_PENDING" });
+
+    try {
+      const subDocRef = doc(db, `${coll}/${docId}/${subcoll}`, subDocId);
+      await deleteDoc(subDocRef);
+      dispatchIfNotCancelled({ type: "DELETED_DOCUMENT" });
+      return { type: "SUCCESS", payload: "" };
+    } catch (err) {
+      dispatchIfNotCancelled({ type: "ERROR", payload: err.message });
+      return { type: "ERROR", payload: err.message };
+    }
+  };
+
+  const updateSubDocument = async (docId, subcoll, subDocId, updates) => {
+    dispatch({ type: "IS_PENDING" });
+    try {
+      const subDocRef = doc(db, `${coll}/${docId}/${subcoll}`, subDocId);
+      const updatedSubDocument = await updateDoc(subDocRef, {
+        ...updates,
+        lastEdited: timestamp,
+      });
+      dispatchIfNotCancelled({
+        type: "UPDATED_DOCUMENT",
+        payload: updatedSubDocument,
+      });
+      return { type: "SUCCESS", payload: updatedSubDocument };
+    } catch (err) {
+      dispatchIfNotCancelled({ type: "ERROR", payload: err.message });
+      console.log(err);
+      return { type: "ERROR", payload: err.message };
+    }
+  };
+
+  // Função para buscar documentos de subcoleção
+  const getSubDocuments = async (docId, subcoll) => {
+    dispatch({ type: "IS_PENDING" });
+    try {
+      const subcollRef = collection(db, `${coll}/${docId}/${subcoll}`);
+      const snapshot = await getDocs(subcollRef);
+      const subDocuments = snapshot.docs.map((doc) => ({
+        ...doc.data(),
+        id: doc.id,
+      }));
+      dispatchIfNotCancelled({ type: "SUCCESS", payload: subDocuments });
+      return subDocuments;
+    } catch (err) {
+      dispatchIfNotCancelled({ type: "ERROR", payload: err.message });
+      return [];
+    }
+  };
+
+  const getDocuments = async () => {
+    dispatch({ type: "IS_PENDING" });
+    try {
+      const snapshot = await getDocs(ref);
+      const documents = snapshot.docs.map((doc) => ({
+        ...doc.data(),
+        id: doc.id,
+      }));
+      dispatchIfNotCancelled({ type: "SUCCESS", payload: documents });
+      return documents;
+    } catch (err) {
+      dispatchIfNotCancelled({ type: "ERROR", payload: err.message });
+      return [];
+    }
+  };
+
+  // Função para buscar um documento específico pelo ID
+  const getDocument = async (docId) => {
+    dispatch({ type: "IS_PENDING" });
+    try {
+      const docRef = doc(db, coll, docId);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const document = { id: docSnap.id, ...docSnap.data() };
+        dispatchIfNotCancelled({ type: "SET_DOCUMENT", payload: document });
+        return document;
+      } else {
+        throw new Error("Documento não encontrado");
+      }
+    } catch (err) {
+      dispatchIfNotCancelled({ type: "ERROR", payload: err.message });
+      return null;
+    }
+  };
+
   useEffect(() => () => setIsCancelled(true), []);
 
   return {
@@ -190,8 +270,13 @@ export const useFirestore = (coll) => {
     deleteDocument,
     createDocument,
     updateDocument,
+    addSubDocument,
+    updateSubDocument,
+    deleteSubDocument,
     response,
-    documents,
     serverTimestamp,
+    getDocuments,
+    getSubDocuments,
+    getDocument, // Adicionando a nova função ao hook
   };
 };
