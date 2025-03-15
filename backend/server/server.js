@@ -1,6 +1,14 @@
-// Carrega as variáveis de ambiente
+import { fileURLToPath } from "url";
+import path from "path";
 import { config } from "dotenv";
-config({ path: process.cwd() + "/.env" });
+
+// Define __dirname no módulo ES
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Carrega o .env que está um nível acima (na pasta backend)
+config({ path: path.join(__dirname, "../.env") });
+console.log("Process CWD:", process.cwd());
 console.log("OPENAI_API_KEY:", process.env.OPENAI_API_KEY);
 
 import express from "express";
