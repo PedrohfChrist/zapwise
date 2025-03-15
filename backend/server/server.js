@@ -1,6 +1,6 @@
 // Carrega as variáveis de ambiente
 import { config } from "dotenv";
-config({ path: "/home/zapwise/backend/.env" });
+config({ path: process.cwd() + "/.env" });
 console.log("OPENAI_API_KEY:", process.env.OPENAI_API_KEY);
 
 import express from "express";
