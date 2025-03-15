@@ -1,4 +1,8 @@
-import "dotenv/config";
+// Carrega as variáveis de ambiente
+import { config } from "dotenv";
+config({ path: "/home/zapwise/backend/.env" });
+console.log("OPENAI_API_KEY:", process.env.OPENAI_API_KEY);
+
 import express from "express";
 import bodyParser from "body-parser";
 import cors from "cors";
