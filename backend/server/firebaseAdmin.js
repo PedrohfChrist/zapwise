@@ -1,4 +1,6 @@
-// src/server/firebaseAdmin.js
+// backend/server/firebaseAdmin.js
+console.log("Caminho das credenciais:", serviceAccountPath);
+
 import admin from "firebase-admin";
 import fs from "fs";
 import path from "path";
